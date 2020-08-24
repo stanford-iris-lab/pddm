@@ -28,14 +28,17 @@ def get_mujoco_py():
         return _MUJOCO_PY_MODULE
     try:
         import mujoco_py
+
         # Override the warning function.
         from mujoco_py.builder import cymj
+
         cymj.set_warning_callback(_mj_warning_fn)
     except ImportError:
         print(
-            'Failed to import mujoco_py. Ensure that mujoco_py (using MuJoCo '
-            'v1.50) is installed.',
-            file=sys.stderr)
+            "Failed to import mujoco_py. Ensure that mujoco_py (using MuJoCo "
+            "v1.50) is installed.",
+            file=sys.stderr,
+        )
         sys.exit(1)
     _MUJOCO_PY_MODULE = mujoco_py
     return mujoco_py
@@ -51,8 +54,8 @@ def get_mujoco_py_mjlib():
             self._lib = lib
 
         def __getattr__(self, name: str):
-            if name.startswith('mj'):
-                return getattr(self._lib, '_' + name)
+            if name.startswith("mj"):
+                return getattr(self._lib, "_" + name)
             raise AttributeError(name)
 
     return MjlibDelegate(get_mujoco_py().cymj)
@@ -60,5 +63,8 @@ def get_mujoco_py_mjlib():
 
 def _mj_warning_fn(warn_data: bytes):
     """Warning function override for mujoco_py."""
-    print('WARNING: Mujoco simulation is unstable (has NaNs): {}'.format(
-        warn_data.decode()))
+    print(
+        "WARNING: Mujoco simulation is unstable (has NaNs): {}".format(
+            warn_data.decode()
+        )
+    )

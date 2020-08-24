@@ -1,0 +1,10 @@
+Collecting absl-py
+  Using cached https://files.pythonhosted.org/packages/1a/53/9243c600e047bd4c3df9e69cfabc1e8004a82cac2e0c484580a78a94ba2a/absl-py-0.9.0.tar.gz
+Requirement already satisfied: six in /afs/cs.stanford.edu/u/behzad/.local/lib/python3.5/site-packages (from absl-py) (1.14.0)
+Building wheels for collected packages: absl-py
+  Running setup.py bdist_wheel for absl-py: started
+  Running setup.py bdist_wheel for absl-py: finished with status 'done'
+  Stored in directory: /afs/cs.stanford.edu/u/behzad/.cache/pip/wheels/8e/28/49/fad4e7f0b9a1227708cbbee4487ac8558a7334849cb81c813d
+Successfully built absl-py
+Installing collected packages: absl-py
+Successfully installed absl-py-0.9.0

@@ -14,16 +14,16 @@
 
 {
 
-#########################
-##### run options
-#########################
+#######################
+##### run options #####
+#######################
 
 'job_name': ['dclaw_turn'],
 'seed': [0],
 
-#########################
-##### experiment options
-#########################
+##############################
+##### experiment options #####
+##############################
 
 ## env
 'env_name': ['pddm_dclaw_turn-v0'],
@@ -46,9 +46,9 @@
 'rollouts_noise_actions': [False],
 'rollouts_document_noised_actions': [False],
 
-##########################
-##### rand data collection
-##########################
+################################
+##### rand data collection #####
+################################
 
 ## collect random rollouts
 'load_existing_random_data': [False],

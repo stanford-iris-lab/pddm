@@ -23,7 +23,6 @@ import os
 
 
 def _binary_op(op, reverse=False):
-
     def fn(self, v):
         self.ops.append((op, v, reverse))
         return self
@@ -33,7 +32,6 @@ def _binary_op(op, reverse=False):
 
 # Helper class for config items to reference other entries.
 class Ref(object):
-
     def __init__(self, name):
         self.name = name
         self.ops = []
@@ -47,7 +45,7 @@ class Ref(object):
         return value
 
     def __str__(self):
-        raise NotImplementedError('Cannot convert Ref to string')
+        raise NotImplementedError("Cannot convert Ref to string")
 
     # Supported operations.
     __add__ = _binary_op(operator.add)
@@ -64,7 +62,7 @@ class Ref(object):
     __getitem__ = _binary_op(operator.getitem)
 
 
-def process_config_files(config_file_paths, default_ext='.txt'):
+def process_config_files(config_file_paths, default_ext=".txt"):
     """Finds and processes config files in the given list of paths.
 
     Args:
@@ -79,10 +77,10 @@ def process_config_files(config_file_paths, default_ext='.txt'):
     paths = []
     # Expand globs and directories.
     for path in config_file_paths:
-        if '*' in path:
+        if "*" in path:
             paths.extend(glob.glob(path))
         elif os.path.isdir(path):
-            paths.extend(glob.glob(os.path.join(path, '*' + default_ext)))
+            paths.extend(glob.glob(os.path.join(path, "*" + default_ext)))
         else:
             paths.append(path)
     # Add jobs from config files.
@@ -90,13 +88,13 @@ def process_config_files(config_file_paths, default_ext='.txt'):
     for path in sorted(paths):
         path_configs = process_config_file(path)
         configs.extend(path_configs)
-        print('Added {} configs from {}'.format(len(path_configs), path))
+        print("Added {} configs from {}".format(len(path_configs), path))
     return configs
 
 
 def process_config_file(config_file_path):
     """Returns a list of expanded configurations from the given file path."""
-    with open(config_file_path, 'r') as file:
+    with open(config_file_path, "r") as file:
         return process_config(file.read())
 
 
@@ -147,11 +145,11 @@ def resolve_references(config):
     config = copy.deepcopy(config)
     key_paths = {}
 
-    def get_paths(d, prefix=''):
+    def get_paths(d, prefix=""):
         for key, val in d.items():
-            path_key = prefix + '.' + key if prefix else key
+            path_key = prefix + "." + key if prefix else key
             if key in key_paths:
-                print('WARNING: Duplicate path key: ' + path_key)
+                print("WARNING: Duplicate path key: " + path_key)
                 continue
             if isinstance(val, dict):
                 get_paths(val, prefix=path_key)
@@ -171,13 +169,13 @@ def resolve_references(config):
 
         # Ensure the key hasn't already been seen.
         if key in resolved_keys:
-            raise KeyError('Cyclic key in config: ' + key)
+            raise KeyError("Cyclic key in config: " + key)
         resolved_keys.add(key)
 
         if not isinstance(val, Ref):
             return
         if val.name not in key_paths:
-            raise KeyError('Non-existent key in config: ' + val.name)
+            raise KeyError("Non-existent key in config: " + val.name)
 
         # If the referenced value is also a Ref, defer evaluation until
         # later. Otherwise, change the value.

@@ -14,11 +14,11 @@
 
 import numpy as np
 
-class Policy_Random(object):
 
+class Policy_Random(object):
     def __init__(self, env):
 
-        #vars
+        # vars
         self.env = env
         self.low_val = -1 * np.ones(self.env.action_space.low.shape)
         self.high_val = np.ones(self.env.action_space.high.shape)
@@ -27,13 +27,19 @@ class Policy_Random(object):
 
         self.rand_ac = np.random.uniform(self.low_val, self.high_val, self.shape)
 
-    def get_action(self, observation, prev_action, random_sampling_params, hold_action_overrideToOne=False):
+    def get_action(
+        self,
+        observation,
+        prev_action,
+        random_sampling_params,
+        hold_action_overrideToOne=False,
+    ):
 
         # params for random sampling
-        sample_velocities = random_sampling_params['sample_velocities']
-        vel_min = random_sampling_params['vel_min']
-        vel_max = random_sampling_params['vel_max']
-        hold_action = random_sampling_params['hold_action']
+        sample_velocities = random_sampling_params["sample_velocities"]
+        vel_min = random_sampling_params["vel_min"]
+        vel_max = random_sampling_params["vel_max"]
+        hold_action = random_sampling_params["hold_action"]
 
         if hold_action_overrideToOne:
             hold_action = 1
@@ -46,33 +52,55 @@ class Policy_Random(object):
 
             if prev_action is None:
                 # generate random action for right now
-                self.rand_ac = np.random.uniform(self.low_val, self.high_val, self.shape)
+                self.rand_ac = np.random.uniform(
+                    self.low_val, self.high_val, self.shape
+                )
                 action = self.rand_ac
 
                 # generate velocity, to be used if next steps might hold_action
-                self.vel_sample = np.random.uniform(vel_min, vel_max, self.env.action_space.low.shape)
-                self.direction_num = np.random.randint(0, 2, self.env.action_space.low.shape)
-                self.vel_sample[self.direction_num==0] = -self.vel_sample[self.direction_num==0]
+                self.vel_sample = np.random.uniform(
+                    vel_min, vel_max, self.env.action_space.low.shape
+                )
+                self.direction_num = np.random.randint(
+                    0, 2, self.env.action_space.low.shape
+                )
+                self.vel_sample[self.direction_num == 0] = -self.vel_sample[
+                    self.direction_num == 0
+                ]
             else:
 
-                if (self.counter%hold_action)==0:
-                    self.vel_sample = np.random.uniform(vel_min, vel_max, self.env.action_space.low.shape)
-                    self.direction_num = np.random.randint(0, 2, self.env.action_space.low.shape)
-                    self.vel_sample[self.direction_num==0] = -self.vel_sample[self.direction_num==0]
+                if (self.counter % hold_action) == 0:
+                    self.vel_sample = np.random.uniform(
+                        vel_min, vel_max, self.env.action_space.low.shape
+                    )
+                    self.direction_num = np.random.randint(
+                        0, 2, self.env.action_space.low.shape
+                    )
+                    self.vel_sample[self.direction_num == 0] = -self.vel_sample[
+                        self.direction_num == 0
+                    ]
 
-                    #go opposite direction if you hit limit
-                    self.vel_sample[prev_action<=self.low_val] = np.abs(self.vel_sample)[prev_action<=self.low_val] #need to do larger action
-                    self.vel_sample[prev_action>=self.high_val] = -np.abs(self.vel_sample)[prev_action>=self.high_val]
-                #new action
+                    # go opposite direction if you hit limit
+                    self.vel_sample[prev_action <= self.low_val] = np.abs(
+                        self.vel_sample
+                    )[
+                        prev_action <= self.low_val
+                    ]  # need to do larger action
+                    self.vel_sample[prev_action >= self.high_val] = -np.abs(
+                        self.vel_sample
+                    )[prev_action >= self.high_val]
+                # new action
                 action = prev_action + self.vel_sample
 
         ### else, for a torque-controlled robot,
         # just uniformly sample random actions
         else:
-            if (self.counter%hold_action)==0:
-                self.rand_ac = np.random.uniform(self.low_val, self.high_val, self.shape)
+            if (self.counter % hold_action) == 0:
+                self.rand_ac = np.random.uniform(
+                    self.low_val, self.high_val, self.shape
+                )
             action = self.rand_ac
 
-        self.counter +=1
+        self.counter += 1
 
         return action, 0

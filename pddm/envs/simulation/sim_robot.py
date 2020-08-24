@@ -30,9 +30,7 @@ class MujocoSimRobot:
     2. dm_control - MuJoCo v2.00
     """
 
-    def __init__(self,
-                 model_file: str,
-                 camera_settings: Optional[Dict] = None):
+    def __init__(self, model_file: str, camera_settings: Optional[Dict] = None):
         """Initializes a new simulation.
 
         Args:
@@ -43,14 +41,13 @@ class MujocoSimRobot:
 
         if not os.path.isfile(model_file):
             raise ValueError(
-                '[MujocoSimRobot] Invalid model file path: {}'.format(
-                    model_file))
+                "[MujocoSimRobot] Invalid model file path: {}".format(model_file)
+            )
 
         mujoco_py = module.get_mujoco_py()
         self.model = mujoco_py.load_model_from_path(model_file)
         self.sim = mujoco_py.MjSim(self.model)
-        self.renderer = MjPyRenderer(
-            self.sim, camera_settings=camera_settings)
+        self.renderer = MjPyRenderer(self.sim, camera_settings=camera_settings)
 
         self.data = self.sim.data
 
@@ -61,12 +58,11 @@ class MujocoSimRobot:
     def save_binary(self, path: str):
         """Saves the loaded model to a binary .mjb file."""
         if os.path.exists(path):
-            raise ValueError(
-                '[MujocoSimRobot] Path already exists: {}'.format(path))
-        if not path.endswith('.mjb'):
-            path = path + '.mjb'
+            raise ValueError("[MujocoSimRobot] Path already exists: {}".format(path))
+        if not path.endswith(".mjb"):
+            path = path + ".mjb"
 
-        with open(path, 'wb') as f:
+        with open(path, "wb") as f:
             f.write(self.model.get_mjb())
 
     def get_mjlib(self):

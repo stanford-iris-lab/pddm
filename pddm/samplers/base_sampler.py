@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import logging
+
 logging.disable(logging.CRITICAL)
 import numpy as np
 import copy
@@ -20,12 +21,15 @@ import copy
 
 # Single core rollout to sample trajectories
 
-def do_rollout(N_percpu,
-               actions_list,
-               actions_taken_so_far,
-               starting_fullenvstate,
-               which_cpu,
-               env=None,):
+
+def do_rollout(
+    N_percpu,
+    actions_list,
+    actions_taken_so_far,
+    starting_fullenvstate,
+    which_cpu,
+    env=None,
+):
     """
     N_percpu        : number of trajectories to execute on this cpu
     actions_list    : list of ALL candidate action sequences
@@ -34,7 +38,7 @@ def do_rollout(N_percpu,
     env             : env object to sample from
     """
 
-    T = len(actions_list[0])  #horizon
+    T = len(actions_list[0])  # horizon
     paths = []
     for ep in range(N_percpu):
 
@@ -46,37 +50,37 @@ def do_rollout(N_percpu,
         agent_infos = []
         env_infos = []
 
-        #reset env to what it was at the beginning of the original MPC rollout
+        # reset env to what it was at the beginning of the original MPC rollout
         curr_env = copy.deepcopy(env)
         o = curr_env.reset(reset_state=starting_fullenvstate)
 
         step = 0
-        #take the steps taken so far, so this forward prediction is done from the correct state
+        # take the steps taken so far, so this forward prediction is done from the correct state
         for ac in actions_taken_so_far:
-            if ac.shape[0]==1:
+            if ac.shape[0] == 1:
                 ac = ac[0]
             o, _, _, _ = curr_env.step(ac)
             step += 1
 
-        #take the steps of this candidate action sequence
+        # take the steps of this candidate action sequence
         for t in range(T):
 
-            #action to execute
+            # action to execute
             a = actions_list[sim_num][t]
 
             next_o, r, done, env_info = curr_env.step(a)
 
-            #save info
+            # save info
             observations.append(o)
             actions.append(a)
             rewards.append(r)
             agent_infos.append(0)
-            env_infos.append(0) #env_info #causes error when env_info is a dictionary
+            env_infos.append(0)  # env_info #causes error when env_info is a dictionary
             o = next_o
 
             step += 1
 
-        #save all results of this candidate action sequence
+        # save all results of this candidate action sequence
         observations.append(o)
         path = dict(
             observations=np.array(observations),
@@ -85,7 +89,8 @@ def do_rollout(N_percpu,
             rewards=np.array(rewards),
             agent_infos=0,
             env_infos=env_infos,
-            terminated=done)
+            terminated=done,
+        )
         paths.append(path)
 
     return paths

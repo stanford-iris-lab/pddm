@@ -21,37 +21,51 @@ import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 import traceback
 
-#my imports
+# my imports
 from pddm.utils.helper_funcs import plot_mean_std
+
 
 def main():
 
     # Parse arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('-j', '--jobs', action='append', nargs='+', help='job/experiment')
-    parser.add_argument('-l', '--labels', action='append', nargs='?', help='label for plotting that experiment')
-    parser.add_argument('-plot_rew', '--plot_rew', action='store_true')
+    parser.add_argument(
+        "-j", "--jobs", action="append", nargs="+", help="job/experiment"
+    )
+    parser.add_argument(
+        "-l",
+        "--labels",
+        action="append",
+        nargs="?",
+        help="label for plotting that experiment",
+    )
+    parser.add_argument("-plot_rew", "--plot_rew", action="store_true")
     args = parser.parse_args()
     jobs = args.jobs[0]
 
     # scan labels
     if args.labels is not None:
-        assert (len(jobs)==len(args.labels)), "The number of labels has to be same as the number of jobs"
+        assert len(jobs) == len(
+            args.labels
+        ), "The number of labels has to be same as the number of jobs"
     else:
-        args.labels = ['']*len(jobs)
+        args.labels = [""] * len(jobs)
 
     # Scan jobs and plot
-    colors=['r', 'g', 'b', 'k', 'c', 'm', 'pink', 'purple']
+    colors = ["r", "g", "b", "k", "c", "m", "pink", "purple"]
     for i in range(len(jobs)):
         if args.plot_rew:
             print("LOOKING AT REW")
-            rew = np.load(jobs[i] + '/rollouts_rewardsPerIter.npy')
+            rew = np.load(jobs[i] + "/rollouts_rewardsPerIter.npy")
         else:
             print("LOOKING AT SCORE")
-            rew = np.load(jobs[i] + '/rollouts_scoresPerIter.npy')
-        plot_mean_std(rew[:, 0], rew[:, 1], label=args.labels[i], newfig=False, color=colors[i])
+            rew = np.load(jobs[i] + "/rollouts_scoresPerIter.npy")
+        plot_mean_std(
+            rew[:, 0], rew[:, 1], label=args.labels[i], newfig=False, color=colors[i]
+        )
 
     plt.show()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
