@@ -7,7 +7,7 @@ import tensorflow as tf
 from tensorflow.keras.backend import sigmoid
 
 # my imports
-from pddm.regressors.discriminator import discriminator_network
+from pddm.regressors.discriminator_network import discriminator_network
 
 
 class Discriminator:
@@ -20,7 +20,7 @@ class Discriminator:
     ):
 
         # init vars
-        self.inputSize = inputSize
+        self.inputSize = inputSize # 2xStateSize + ActionSize
         self.outputSize = 1 # TODO: remove. 
         self.acSize = acSize
         self.sess = sess
@@ -28,7 +28,7 @@ class Discriminator:
 
         # params
         self.params = params
-        self.ensemble_size = self.params.ensemble_size
+        self.disc_ensemble_size = self.params.disc_ensemble_size
         self.print_minimal = self.params.print_minimal
         self.batchsize = self.params.batchsize
         self.K = self.params.K
@@ -53,7 +53,7 @@ class Discriminator:
 
         self.inputs_ = tf.placeholder(
             self.tf_datatype,
-            shape=[self.ensemble_size, None, self.K, self.inputSize],
+            shape=[self.disc_ensemble_size, None, self.K, self.inputSize],
             name="nn_inputs",
         )
 
@@ -69,48 +69,73 @@ class Discriminator:
         pass 
 
     def discriminate(self, states, actions, next_states):
-        """Returns p_theta(D=1|s,a,s').
+        """
+        Returns p_theta(D=1|s,a,s').
 
         Arguments:
-           obs: (N, dim_obs) tensor.
-           act: (N, dim_act) tensor.
-           next_obs: (N, dim_obs) tensor.
+           states: [model_ensemble_size x N, state_size] 
+           actions: [model_ensemble_size x N, action_size] 
+           next_states: [model_ensemble_size x N, state_size] 
         Returns:
-           (N, 1) tensor of probabilities.
+           probs: (disc_ensemble_size, model_ensemble_size x N)
         """
-        return sigmoid(self.discriminate_logits(obs, act, next_obs))
+
+        # input_data: [N * ensemble_size, 2xStateSize + ActionSize]
+        input_data = np.concatenate([states, actions, next_states], axis = -1)
+        input_data = np.tile(input_data, [self.disc_ensemble_size,1,1])
+        input_data = np.expand_dims(input_data, axis = 2)
+
+        probs = self.sess.run(
+                    [self.probs],
+                    feed_dict={
+                        self.inputs_: input_data,
+                    },
+                )
+        probs = np.reshape(np.array(probs), np.array(probs).shape[1:-1])
+
+        return probs 
         
 
     def define_forward_pass(self):
+        """Define discriminator forward pass"""
+        """
+        TODO: move to correct place. 
 
+        Discriminator information:
+            ? Input: (disc_ensemble_size, batch_size (or N), K, state_size + action_size)
+            ? Output: (disc_ensemble_size, batch_size (or N), state_size)
+
+            K: number of previous actions to consider. 
+        """
         # optimizer
         self.opt = tf.train.AdamOptimizer(self.params.lr)
 
         self.curr_nn_outputs = []
-        self.mses = []
+        self.ces = [] # Cross entropy losses
         self.train_steps = []
+        self.probs = []
 
-        for i in range(self.ensemble_size):
+        for i in range(self.disc_ensemble_size):
 
             # forward pass through this network
             this_output = discriminator_network(
-                self.inputs_clipped[i],
+                self.inputs_clipped[i], # [batch_size, K, 2 x StateSize + ActionSize]
                 self.inputSize,
                 self.params.num_fc_layers,
                 self.params.depth_fc_layers,
-                self.tf_datatype,
+                self.tf_datatype, 
                 scope=f"disc_{i}",
             )
             self.curr_nn_outputs.append(this_output)
 
             # loss of this network's predictions
-            # this_mse = tf.reduce_mean(tf.square(self.labels_ - this_output))
+            # this_cross_entropy = tf.reduce_mean(tf.square(self.labels_ - this_output))
+            self.probs.append(tf.nn.softmax(logits=this_output, axis=1))
 
-
-            this_mse = tf.nn.softmax_cross_entropy_with_logits(
+            this_cross_entropy = tf.nn.softmax_cross_entropy_with_logits(
                 labels=self.labels_, logits=this_output
             )
-            self.mses.append(this_mse)
+            self.ces.append(this_cross_entropy)
 
             # this network's weights
             this_theta = tf.get_collection(
@@ -120,13 +145,14 @@ class Discriminator:
             # train step for this network
             gv = [
                 (g, v)
-                for g, v in self.opt.compute_gradients(this_mse, this_theta)
+                for g, v in self.opt.compute_gradients(this_cross_entropy, this_theta)
                 if g is not None
             ]
             self.train_steps.append(self.opt.apply_gradients(gv))
 
         self.predicted_outputs = self.curr_nn_outputs
-
+        
+        
 
 
     # train: actual_transitions, predicted_transitions 
@@ -135,8 +161,8 @@ class Discriminator:
         self,
         data_inputs_rand,
         data_outputs_rand,
-        data_inputs_onPol,
-        data_outputs_onPol,
+        data_inputs_onPol, # [?, K, state_shape + action_shape + state_shape]
+        data_outputs_onPol, # [?, K]
         nEpoch,
         inputs_val=None,
         outputs_val=None,
@@ -199,15 +225,20 @@ class Discriminator:
                 # walk through the shuffled new data
                 data_inputs_batch = data_inputs[
                     all_indices[batch * self.batchsize : (batch + 1) * self.batchsize]
-                ]  # [bs x K x dim]
+                ]  # [batch_size, K, state_size * 2 + action_size]
                 data_outputs_batch = data_outputs[
                     all_indices[batch * self.batchsize : (batch + 1) * self.batchsize]
-                ]  # [bs x dim]
+                ]  # [batch_size, state_size * 2 + action_size]
 
-                # one iteration of feedforward training
-                this_dataX = np.tile(data_inputs_batch, (self.ensemble_size, 1, 1, 1))
+                ###########################################################
+                ########## one iteration of feedforward training ##########
+                ###########################################################
+
+                # this_dataX: [ensemble_size, batch_size, K, state_size * 2 + action_size]
+                this_dataX = np.tile(data_inputs_batch, (self.disc_ensemble_size, 1, 1, 1))
+                
                 _, losses, outputs, true_output = self.sess.run(
-                    [self.train_steps, self.mses, self.curr_nn_outputs, self.labels_],
+                    [self.train_steps, self.ces, self.curr_nn_outputs, self.labels_],
                     feed_dict={
                         self.inputs_: this_dataX,
                         self.labels_: data_outputs_batch,
@@ -325,9 +356,10 @@ class Discriminator:
                 ]
 
             # one iteration of feedforward training
-            this_dataX = np.tile(dataX_batch, (self.ensemble_size, 1, 1, 1))
+            this_dataX = np.tile(dataX_batch, (self.disc_ensemble_size, 1, 1, 1))
+            
             z_predictions_multiple, losses = self.sess.run(
-                [self.curr_nn_outputs, self.mses],
+                [self.curr_nn_outputs, self.ces],
                 feed_dict={self.inputs_: this_dataX, self.labels_: dataZ_batch},
             )
             loss = np.mean(losses)
@@ -366,7 +398,7 @@ class Discriminator:
             curr_states_NK = np.tile(np.expand_dims(states_true[0], 0), (N, 1, 1))
 
         # curr_states_NK: [ens, N, K, sDim]
-        curr_states_NK = np.tile(curr_states_NK, (self.ensemble_size, 1, 1, 1))
+        curr_states_NK = np.tile(curr_states_NK, (self.disc_ensemble_size, 1, 1, 1))
 
         # advance all N sims, one timestep at a time
         for timestep in range(horizon):
@@ -377,7 +409,7 @@ class Discriminator:
             # actions_toPerform: [N, horizon, K, aDim]
             curr_actions_NK = actions_toPerform[:, timestep, :, :]
             # curr_actions_NK: [ens, N, K, aDim]
-            curr_actions_NK = np.tile(curr_actions_NK, (self.ensemble_size, 1, 1, 1))
+            curr_actions_NK = np.tile(curr_actions_NK, (self.disc_ensemble_size, 1, 1, 1))
 
             # keep track of states for all N sims
             state_list.append(np.copy(curr_states_pastTimestep))
@@ -462,7 +494,7 @@ class Discriminator:
             )
 
             # run through NN to get prediction
-            this_dataX = np.tile(inputs_K_preprocessed, (self.ensemble_size, 1, 1, 1))
+            this_dataX = np.tile(inputs_K_preprocessed, (self.disc_ensemble_size, 1, 1, 1))
             #### TO DO... for now, just see 1st model's prediction
             model_outputs = self.sess.run(
                 [self.predicted_outputs], feed_dict={self.inputs_: this_dataX}

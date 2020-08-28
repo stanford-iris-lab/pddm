@@ -17,12 +17,14 @@ class MPCRollout:
         execute_sideRollouts,
         plot_sideRollouts,
         params,
+        discriminator=False, 
         evaluating=False,
     ):
 
         # init vars
         self.env = env
         self.dyn_models = dyn_models
+        self.discriminator = discriminator
         self.print_minimal = params.print_minimal
         self.use_ground_truth_dynamics = params.use_ground_truth_dynamics
         self.evaluating = evaluating
@@ -66,6 +68,7 @@ class MPCRollout:
             execute_sideRollouts,
             plot_sideRollouts,
             params,
+            discriminator=self.discriminator
         )
 
     def perform_rollout(
@@ -75,6 +78,7 @@ class MPCRollout:
         controller_type,
         take_exploratory_actions=False,
         isRandom=False,
+        use_disc=False
     ):
         """
         Args:
@@ -104,8 +108,10 @@ class MPCRollout:
         #######################################
 
         if controller_type == "rand":
+            raise NotImplementedError
             get_action = self.controller_randshooting.get_action
         elif controller_type == "cem":
+            raise NotImplementedError
             get_action = self.controller_cem.get_action
         elif controller_type == "mppi":
             get_action = self.controller_mppi.get_action
@@ -192,6 +198,7 @@ class MPCRollout:
                     starting_fullenvstate,
                     self.evaluating,
                     take_exploratory_actions,
+                    use_disc=use_disc
                 )
 
             #########################################################

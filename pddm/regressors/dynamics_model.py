@@ -18,8 +18,9 @@ class Dyn_Model:
     ):
 
         # init vars
-        self.inputSize = inputSize
-        self.outputSize = outputSize
+        self.inputSize = inputSize # StateSize + ActionSize
+        self.outputSize = outputSize # StateSize
+        
         self.acSize = acSize
         self.sess = sess
         self.normalization_data = normalization_data
@@ -60,7 +61,7 @@ class Dyn_Model:
         )
 
     def define_forward_pass(self):
-
+        
         # optimizer
         self.opt = tf.train.AdamOptimizer(self.params.lr)
 
@@ -100,6 +101,7 @@ class Dyn_Model:
             self.train_steps.append(self.opt.apply_gradients(gv))
 
         self.predicted_outputs = self.curr_nn_outputs
+        
 
     def train(
         self,
@@ -166,12 +168,23 @@ class Dyn_Model:
 
                 # one iteration of feedforward training
                 this_dataX = np.tile(data_inputs_batch, (self.ensemble_size, 1, 1, 1))
+
+
+                """
+                TODO: move to correct place. 
+
+                Forward Model information:
+                    Input: (ensemble_size, batch_size, K, state_size + action_size)
+                    Output: (ensemble_size, batch_size, state_size)
+
+                    K: number of previous actions to consider. 
+                """
                 _, losses, outputs, true_output = self.sess.run(
                     [self.train_steps, self.mses, self.curr_nn_outputs, self.labels_],
                     feed_dict={
                         self.inputs_: this_dataX,
                         self.labels_: data_outputs_batch,
-                    },
+                    },    
                 )
                 loss = np.mean(losses)
 

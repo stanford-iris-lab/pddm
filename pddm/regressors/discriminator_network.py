@@ -9,7 +9,8 @@ def discriminator_network(
 
     with tf.variable_scope(str(scope)):
 
-        # concat K entries together [bs x K x sa] --> [bs x ksa]
+        # concat K entries together 
+        # [bs, K, 2 x StateSize + ActionSize] --> [bs, K x (2 x StateSize + ActionSize)]
         inputState =  tf.layers.flatten(inputStates)
 
         # vars

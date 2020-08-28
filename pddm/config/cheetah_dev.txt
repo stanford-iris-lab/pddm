@@ -14,22 +14,22 @@
 
 {
 
-#######################
-##### run options #####
-#######################
+#########################
+##### run options
+#########################
 
-'job_name': ['dclaw_turn'],
+'job_name': ['cheetah'],
 'seed': [0],
 
-##############################
-##### experiment options #####
-##############################
+#########################
+##### experiment options
+#########################
 
 ## env
-'env_name': ['pddm_dclaw_turn-v0'],
-'rollout_length': [40],
-'num_iters': [2], # 150
-'num_trajectories_per_iter': [5], # 20
+'env_name': ['pddm_cheetah-v0'],
+'rollout_length': [10], # 100
+'num_iters': [1],
+'num_trajectories_per_iter': [5],
 
 ## continue
 'continue_run': [-1],
@@ -46,22 +46,22 @@
 'rollouts_noise_actions': [False],
 'rollouts_document_noised_actions': [False],
 
-################################
-##### rand data collection #####
-################################
+##########################
+##### rand data collection
+##########################
 
 ## collect random rollouts
 'load_existing_random_data': [False],
-'num_rand_rollouts_train': [50],
-'num_rand_rollouts_val': [10],
-'rand_rollout_length': [40],
+'num_rand_rollouts_train': [200],
+'num_rand_rollouts_val': [50],
+'rand_rollout_length': [100],
 'use_threading': [True],
 
 ## sample random velocities vs. positions
-'rand_policy_sample_velocities': [True],
-'rand_policy_vel_min': [0.4],
-'rand_policy_vel_max': [0.5],
-'rand_policy_hold_action': [3],
+'rand_policy_sample_velocities': [False],
+'rand_policy_vel_min': [0],
+'rand_policy_vel_max': [0],
+'rand_policy_hold_action': [1],
 
 ##########################
 ##### dynamics model
@@ -71,13 +71,12 @@
 'num_fc_layers': [2],
 'depth_fc_layers': [250],
 'ensemble_size': [3],
-'disc_ensemble_size': [7],
 'K': [1],
 
 ## model training
 'warmstart_training': [False],
 'always_use_savedModel': [False],
-'batchsize': [64],
+'batchsize': [5], # 512
 'lr': [0.001],
 'nEpoch': [4], # 40
 'nEpoch_init': [4], # 40
@@ -87,17 +86,17 @@
 ##########################
 
 ## MPC
-'horizon': [7],
+'horizon': [20],
 'num_control_samples': [700],
 'controller_type': ['mppi'],
 
 ## cem
 'cem_max_iters': [3],
-'cem_num_elites': [20],
+'cem_num_elites': [5],
 
 ## mppi
-'mppi_kappa': [0.5],
+'mppi_kappa': [1],
 'mppi_mag_noise': [0.9],
-'mppi_beta': [0.7],
+'mppi_beta': [0.9],
 
 }

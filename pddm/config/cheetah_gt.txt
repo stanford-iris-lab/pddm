@@ -14,29 +14,29 @@
 
 {
 
-#######################
-##### run options #####
-#######################
+#########################
+##### run options
+#########################
 
-'job_name': ['dclaw_turn'],
+'job_name': ['cheetah_gt'],
 'seed': [0],
 
-##############################
-##### experiment options #####
-##############################
+#########################
+##### experiment options
+#########################
 
 ## env
-'env_name': ['pddm_dclaw_turn-v0'],
-'rollout_length': [40],
-'num_iters': [2], # 150
-'num_trajectories_per_iter': [5], # 20
+'env_name': ['pddm_cheetah-v0'],
+'rollout_length': [30],
+'num_iters': [1],
+'num_trajectories_per_iter': [1],
 
 ## continue
 'continue_run': [-1],
 'continue_run_filepath': [''],
 
 ## some T/F options
-'use_ground_truth_dynamics': [False],
+'use_ground_truth_dynamics': [True],
 'visualize_MPC_rollout': [False],
 'print_minimal': [False],
 
@@ -46,22 +46,22 @@
 'rollouts_noise_actions': [False],
 'rollouts_document_noised_actions': [False],
 
-################################
-##### rand data collection #####
-################################
+##########################
+##### rand data collection
+##########################
 
 ## collect random rollouts
 'load_existing_random_data': [False],
 'num_rand_rollouts_train': [50],
-'num_rand_rollouts_val': [10],
-'rand_rollout_length': [40],
+'num_rand_rollouts_val': [50],
+'rand_rollout_length': [30],
 'use_threading': [True],
 
 ## sample random velocities vs. positions
 'rand_policy_sample_velocities': [True],
-'rand_policy_vel_min': [0.4],
-'rand_policy_vel_max': [0.5],
-'rand_policy_hold_action': [3],
+'rand_policy_vel_min': [0.05],
+'rand_policy_vel_max': [0.15],
+'rand_policy_hold_action': [2],
 
 ##########################
 ##### dynamics model
@@ -71,16 +71,15 @@
 'num_fc_layers': [2],
 'depth_fc_layers': [250],
 'ensemble_size': [3],
-'disc_ensemble_size': [7],
 'K': [1],
 
 ## model training
 'warmstart_training': [False],
 'always_use_savedModel': [False],
-'batchsize': [64],
+'batchsize': [512],
 'lr': [0.001],
-'nEpoch': [4], # 40
-'nEpoch_init': [4], # 40
+'nEpoch': [2],
+'nEpoch_init': [2],
 
 ##########################
 ##### controller
@@ -88,7 +87,7 @@
 
 ## MPC
 'horizon': [7],
-'num_control_samples': [700],
+'num_control_samples': [200],
 'controller_type': ['mppi'],
 
 ## cem
@@ -96,8 +95,8 @@
 'cem_num_elites': [20],
 
 ## mppi
-'mppi_kappa': [0.5],
+'mppi_kappa': [10],
 'mppi_mag_noise': [0.9],
-'mppi_beta': [0.7],
+'mppi_beta': [0.6],
 
 }

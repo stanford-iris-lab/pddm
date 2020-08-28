@@ -1,3 +1,10 @@
+# TODO: train model on [model + disc] data 
+# TODO: plan with disc
+# TODO: random data collection (+ mix random data with onPol data)
+# TODO: load runs
+# TODO: ensembles
+# TODO: stochastic forward models
+
 import os
 
 os.environ["MKL_THREADING_LAYER"] = "GNU"
@@ -43,7 +50,7 @@ def run_job(args, save_dir=None):
 
 
         ############################################################
-        ### initialize some commonly used parameters (from args) ###
+        ########## initialize some parameters (from args) ##########
         ############################################################
 
         env_name = args.env_name
@@ -212,8 +219,8 @@ def run_job(args, save_dir=None):
 
         dyn_models = Dyn_Model(inputSize, outputSize, acSize, sess, params=args)
 
-
         discriminator = Discriminator(inputSize*2 - acSize, acSize, sess, params=args)
+        
         
         mpc_rollout = MPCRollout(
             env,
@@ -222,6 +229,7 @@ def run_job(args, save_dir=None):
             execute_sideRollouts,
             plot_sideRollouts,
             args,
+            discriminator = discriminator
         )
 
         # Initialize TF variables
@@ -361,7 +369,7 @@ def run_job(args, save_dir=None):
             else:
                 # Train model 
                 ## Training on random and on policy data. 
-                # assert 1 == 0, f"{inputs.shape}"
+
                 training_loss, training_lists_to_save = dyn_models.train(
                     inputs,
                     outputs,
@@ -395,7 +403,7 @@ def run_job(args, save_dir=None):
                 # perform 1 MPC rollout 
                 if not args.print_minimal:
                     print(
-                        "\n####################### Performing MPC rollout #",
+                        "\n####################### Performing MPC rollout [Model Only] #",
                         rollout_num,
                     )
 
@@ -630,30 +638,32 @@ def run_job(args, save_dir=None):
 
             if not (args.print_minimal):
                 print("\n#####################################")
-                print("Training the dynamics model..... iteration ", counter)
+                print("Training the discriminator ..... iteration ", counter)
                 print("#####################################\n")
                 print("    amount of random data: ", numData_train_rand)
                 print("    amount of onPol data: ", numData_train_onPol)
 
+            print(f"before: inputs_onPol.shape: {disc_inputs_onPol.shape}")
             """Why?!"""
             ### copy train_onPol until it's big enough
-            if len(inputs_onPol) > 0:
-                while inputs_onPol.shape[0] < inputs.shape[0]:
-                    inputs_onPol = np.concatenate([inputs_onPol, inputs_onPol])
-                    outputs_onPol = np.concatenate([outputs_onPol, outputs_onPol])
+            if len(disc_inputs_onPol) > 0:
+                while disc_inputs_onPol.shape[0] < inputs.shape[0]:
+                    disc_inputs_onPol = np.concatenate([disc_inputs_onPol, disc_inputs_onPol])
+                    disc_outputs_onPol = np.concatenate([disc_outputs_onPol, disc_outputs_onPol])
 
             """Why?!"""
             ### copy val_onPol until it's big enough
-            while inputs_val_onPol.shape[0] < args.batchsize:
-                inputs_val_onPol = np.concatenate(
-                    [inputs_val_onPol, inputs_val_onPol], 0
+            while disc_inputs_val_onPol.shape[0] < args.batchsize:
+                disc_inputs_val_onPol = np.concatenate(
+                    [disc_inputs_val_onPol, disc_inputs_val_onPol], 0
                 )
-                outputs_val_onPol = np.concatenate(
-                    [outputs_val_onPol, outputs_val_onPol], 0
+                disc_outputs_val_onPol = np.concatenate(
+                    [disc_outputs_val_onPol, disc_outputs_val_onPol], 0
                 )
 
-            # restore model if doing continue_run otherwise
-            # re-initialize all vars (randomly) if training from scratch
+            print(f"after: inputs_onPol.shape: {disc_inputs_onPol.shape}")
+            
+            # restore model if doing continue_run otherwise re-initialize all vars (randomly) 
             if args.warmstart_training:
                 if firstTime:
                     if continue_run > 0:
@@ -701,13 +711,14 @@ def run_job(args, save_dir=None):
                 )
             else:
                 # Train model on random and on policy data. 
+                """What is this expansion for?"""
                 disc_inputs_onPol = np.expand_dims(disc_inputs_onPol, axis = 1)
                 disc_outputs_onPol = np.expand_dims(disc_outputs_onPol, axis = 1)
 
                 disc_inputs_val_onPol = np.expand_dims(disc_inputs_val_onPol, axis = 1)
                 disc_outputs_val_onPol = np.expand_dims(disc_outputs_val_onPol, axis = 1)
 
-                # assert 1 == 123, f"{outputs.shape}, {disc_inputs_onPol.shape}"
+                # TODO: handle random data inputs
                 training_loss, training_lists_to_save = discriminator.train(
                     inputs,
                     outputs,
@@ -719,18 +730,7 @@ def run_job(args, save_dir=None):
                     inputs_val_onPol=disc_inputs_val_onPol,
                     outputs_val_onPol=disc_outputs_val_onPol,
                 )
-                # training_loss, training_lists_to_save = discriminator.train(
-                #     inputs,
-                #     outputs,
-                #     inputs_onPol,
-                #     outputs_onPol,
-                #     nEpoch_use,
-                #     inputs_val=inputs_val,
-                #     outputs_val=outputs_val,
-                #     inputs_val_onPol=inputs_val_onPol,
-                #     outputs_val_onPol=outputs_val_onPol,
-                # )
-
+            
             # saving rollout info
             rollouts_info = []
             list_rewards = []
@@ -750,7 +750,7 @@ def run_job(args, save_dir=None):
                 # perform 1 MPC rollout 
                 if not args.print_minimal:
                     print(
-                        "\n####################### Performing MPC rollout #",
+                        "\n####################### Performing MPC rollout [Model + Disc] #",
                         rollout_num,
                     )
 
@@ -764,6 +764,7 @@ def run_job(args, save_dir=None):
                     starting_observation,
                     controller_type=args.controller_type,
                     take_exploratory_actions=False,
+                    use_disc=True
                 )
 
                 """
@@ -836,9 +837,10 @@ def run_job(args, save_dir=None):
             rollouts_trainOnPol = rollouts_trainOnPol + rollouts_train
             rollouts_valOnPol = rollouts_valOnPol + rollouts_val
 
-            #########################################################
-            ### save everything about this iter of model training ###
-        
+            #############################################################
+            ######## save everything about this iter of training ########
+            #############################################################
+
             trainingData_perIter.append(numData_train_rand + numData_train_onPol)
             trainingLoss_perIter.append(training_loss)
 
@@ -856,11 +858,11 @@ def run_job(args, save_dir=None):
             ### save all info from this training iteration
             saver.save_model()
             saver.save_training_info(saver_data)
-            ###                                                 ###
-            #######################################################
+            
 
-            #######################################################
-            ### save everything about this iter of MPC rollouts ###
+            #############################################################
+            ###### save everything about this iter of MPC rollouts ######
+            #############################################################
 
             # append onto rewards/scores
             rew_perIter.append([np.mean(list_rewards), np.std(list_rewards)])
@@ -871,9 +873,6 @@ def run_job(args, save_dir=None):
             saver_data.rollouts_info = rollouts_info
             saver.save_rollout_info(saver_data)
             counter = counter + 1
-
-            ###                                                 ###
-            #######################################################
 
             firstTime = False
         return

@@ -72,6 +72,7 @@ def convert_to_parser_args(args_source=sys.argv[1:]):
     parser.add_argument("--num_fc_layers", type=int, default=2)
     parser.add_argument("--depth_fc_layers", type=int, default=64)
     parser.add_argument("--ensemble_size", type=int, default=1)  # ensemble size
+    parser.add_argument("--disc_ensemble_size", type=int, default=1)  # disc ensemble size
     parser.add_argument(
         "--K", type=int, default=1
     )  # number of past states for input to model

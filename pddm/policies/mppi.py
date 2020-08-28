@@ -20,6 +20,7 @@ class MPPI(object):
         execute_sideRollouts,
         plot_sideRollouts,
         params,
+        discriminator=None
     ):
 
         ###########
@@ -45,6 +46,8 @@ class MPPI(object):
         self.sigma = params.mppi_mag_noise * np.ones(self.env.action_dim)
         self.beta = params.mppi_beta
         self.mppi_mean = np.zeros((self.horizon, self.ac_dim))  # start mean at 0
+
+        self.discriminator = discriminator
 
     ###################################################################
     ###################################################################
@@ -80,6 +83,7 @@ class MPPI(object):
         starting_fullenvstate,
         evaluating,
         take_exploratory_actions,
+        use_disc=False
     ):
 
         # init vars
@@ -188,6 +192,28 @@ class MPPI(object):
         ########## evaluate the predicted trajectories ##########
         #########################################################
 
+        if use_disc: 
+            for t in range(self.horizon): 
+                state = resulting_states_list[:,t, :, :]
+                next_state = resulting_states_list[:,t + 1, :, :]
+                action =  np.tile(all_acs[:,t,-1,:] , [state.shape[0], 1, 1])
+                # merge ensemble and N dims
+                state = np.reshape(state, [-1,state.shape[-1]])
+                action = np.reshape(action, [-1, action.shape[-1]])
+                next_state = np.reshape(next_state, [-1,next_state.shape[-1]])
+
+                feasibility_probs = self.discriminator.discriminate(state, action, next_state)
+                model_ens_size = resulting_states_list.shape[0]
+                disc_ens_size = feasibility_probs.shape[0]
+                feasibility_probs = np.reshape(feasibility_probs, [disc_ens_size, model_ens_size, -1])
+                
+                mean_feasibility_probs = np.mean(feasibility_probs, axis = 0)
+
+                # assert False, mean_feasibility_probs.shape
+
+
+            # raise NotImplementedError
+
         # calculate costs [N,]
         costs, mean_costs, std_costs = calculate_costs(
             resulting_states_list,
@@ -196,6 +222,10 @@ class MPPI(object):
             evaluating,
             take_exploratory_actions,
         )
+        
+        assert 1 == 2, f"costs.shape: {costs.shape}\nmean_costs.shape: {mean_costs.shape}\nstd_costs.shape: {std_costs.shape}"
+
+        raise NotImplementedError
         # uses all paths to update action mean (for horizon steps)
         # Note: mppi_update needs rewards, so pass in -costs
         selected_action = self.mppi_update(-costs, -mean_costs, std_costs, all_samples)
