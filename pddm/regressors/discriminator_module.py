@@ -62,15 +62,37 @@ class Discriminator:
         )
 
     def discriminate_logits(self, states, actions, next_states):
-        assert 1 == 2 
-        # Normalize input 
-        # Discriminate 
-        # Denormalize
-        pass 
+        """
+        Return discriminator logits
+
+        Arguments:
+           states: [model_ensemble_size x N, state_size] 
+           actions: [model_ensemble_size x N, action_size] 
+           next_states: [model_ensemble_size x N, state_size] 
+        Returns:
+           logits: (disc_ensemble_size, model_ensemble_size x N)
+        """
+
+        # TODO: check if normalization is done right
+        # input_data: [N * ensemble_size, 2xStateSize + ActionSize]
+        input_data = np.concatenate([states, actions, next_states], axis = -1)
+        input_data = np.tile(input_data, [self.disc_ensemble_size,1,1])
+        input_data = np.expand_dims(input_data, axis = 2)
+
+        logits = self.sess.run(
+                    [self.predicted_outputs],
+                    feed_dict={
+                        self.inputs_: input_data,
+                    },
+                )
+
+        logits = np.reshape(np.array(logits), np.array(logits).shape[1:-1])
+        return logits 
 
     def discriminate(self, states, actions, next_states):
+        # TODO: check if normalization is done right
         """
-        Returns p_theta(D=1|s,a,s').
+        Return p_theta(D=1|s,a,s').
 
         Arguments:
            states: [model_ensemble_size x N, state_size] 

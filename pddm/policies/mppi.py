@@ -37,9 +37,9 @@ class MPPI(object):
         self.reward_func = reward_func
         self.env = copy.deepcopy(env)
 
-        #############
-        ## init mppi vars
-        #############
+        ##########################
+        ##### init mppi vars #####
+        ##########################
         self.sample_velocity = params.rand_policy_sample_velocities
         self.ac_dim = self.env.env.action_space.shape[0]
         self.mppi_kappa = params.mppi_kappa
@@ -56,6 +56,10 @@ class MPPI(object):
     ###################################################################
 
     def mppi_update(self, scores, mean_scores, std_scores, all_samples):
+
+        """Unused variables, setting them to None just to be sure"""
+        mean_scores = None
+        std_scores = None
 
         #########################
         ## how each sim's score compares to the best score
@@ -193,6 +197,7 @@ class MPPI(object):
         #########################################################
 
         if use_disc: 
+            mean_feasibility_probs = []
             for t in range(self.horizon): 
                 state = resulting_states_list[:,t, :, :]
                 next_state = resulting_states_list[:,t + 1, :, :]
@@ -202,12 +207,14 @@ class MPPI(object):
                 action = np.reshape(action, [-1, action.shape[-1]])
                 next_state = np.reshape(next_state, [-1,next_state.shape[-1]])
 
-                feasibility_probs = self.discriminator.discriminate(state, action, next_state)
+                feasibility_probs = self.discriminator.discriminate_logits(state, action, next_state)
                 model_ens_size = resulting_states_list.shape[0]
                 disc_ens_size = feasibility_probs.shape[0]
                 feasibility_probs = np.reshape(feasibility_probs, [disc_ens_size, model_ens_size, -1])
-                
-                mean_feasibility_probs = np.mean(feasibility_probs, axis = 0)
+                mean_feasibility_probs.append(np.mean(feasibility_probs, axis = 0))
+            mean_feasibility_probs = np.array(mean_feasibility_probs)
+        else: 
+            mean_feasibility_probs = None
 
                 # assert False, mean_feasibility_probs.shape
 
@@ -221,11 +228,11 @@ class MPPI(object):
             self.reward_func,
             evaluating,
             take_exploratory_actions,
+            disc_logits=mean_feasibility_probs
         )
         
-        assert 1 == 2, f"costs.shape: {costs.shape}\nmean_costs.shape: {mean_costs.shape}\nstd_costs.shape: {std_costs.shape}"
+        """Haven't checked after this"""
 
-        raise NotImplementedError
         # uses all paths to update action mean (for horizon steps)
         # Note: mppi_update needs rewards, so pass in -costs
         selected_action = self.mppi_update(-costs, -mean_costs, std_costs, all_samples)
