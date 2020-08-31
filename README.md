@@ -14,10 +14,10 @@ Based on [[Project Page]](https://bit.ly/pddm2019) [[Paper]](https://arxiv.org/a
 Please note that this is research code, and as such, is still under construction. This code implements the model-based RL algorithm presented in PDDM. Please contact Anusha Nagabandi for questions or concerns. <br/><br/>
 
 **Contents of this README:**
-- [A. Getting Started](#a-getting-started)
-- [B. Quick Overview](b-quick-overview)
-- [C. Train and visualize some tests](#c-train-and-visualize-some-tests)
-- [D. Run experiments](#d-run-experiments)
+- [Getting Started](#a-getting-started)
+- [Quick Overview](b-quick-overview)
+<!-- - [Train and visualize some tests](#c-train-and-visualize-some-tests) -->
+- [Run experiments](#d-run-experiments)
 <br/><br/>
 
 
@@ -62,7 +62,7 @@ d) The MJPL before the python visualization commands below are needed only if wo
 
 
 
-## B. Quick Overview ##
+## Quick Overview ##
 
 The overall procedure that is implemented in this code is the iterative process of learning a dynamics model and then running an MPC controller which uses that model to perform action selection. The code starts by initializing a dataset of randomly collected rollouts (i.e., collected with a random policy), and then iteratively (a) training a model on the dataset and (b) collecting rollouts (using MPC with that model) and aggregating them into the dataset.
 
@@ -73,7 +73,7 @@ To see available parameters to set, see the files in the configs folder, as well
 
 
 
-## C. Train and visualize some tests ##
+<!-- ## C. Train and visualize some tests ##
 
 Cheetah:
 ```bash
@@ -114,10 +114,10 @@ Note that this will work well but also take a while to run, because it's using g
 python train.py --config ../config/test_baoding_gt.txt --output_dir ../output --use_gpu
 MJPL python visualize_iteration.py --job_path ../output/baoding_gt --iter_num 0
 ```
-<br/><br/>
+<br/><br/> -->
 
 
-## D. Run experiments ##
+## Run experiments ##
 
 **Train:**
 
