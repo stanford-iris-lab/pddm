@@ -402,8 +402,6 @@ def run_job(args, save_dir=None):
                     take_exploratory_actions=False,
                 )
 
-                
-
                 if args.wandb:
                     wandb.log({"model_only/rollout_reward": rollout_info['rollout_rewardTotal']})
 
@@ -436,52 +434,14 @@ def run_job(args, save_dir=None):
             #########################################################
 
             num_rand_rollouts = 5
-            # Original code for random rollout generation
-            # rollouts_rand = collect_random_rollouts(
-            #     env,
-            #     random_policy,
-            #     num_rand_rollouts,
-            #     args.rollout_length,
-            #     dt_from_xml,
-            #     args,
-            # )
-
-            rollouts_rand = []
-            # random sampling params
-            random_sampling_params = dict(
-                sample_velocities=args.rand_policy_sample_velocities,
-                vel_min=args.rand_policy_vel_min,
-                vel_max=args.rand_policy_vel_max,
-                hold_action=args.rand_policy_hold_action,
+            rollouts_rand = collect_random_rollouts(
+                env,
+                random_policy,
+                num_rand_rollouts,
+                args.rollout_length,
+                dt_from_xml,
+                args,
             )
-
-            for rand_rollout_counter in range(num_rand_rollouts):
-                # reset env
-                starting_observation, starting_state = env.reset(
-                    return_start_state=True
-                )
-
-                rollout_info = mpc_rollout.perform_rollout(
-                    starting_state,
-                    starting_observation,
-                    controller_type=args.controller_type,
-                    take_exploratory_actions=False,
-                    use_disc=False,
-                    isRandom=True,
-                    random_sampling_params=random_sampling_params
-                )
-
-                rollout = Rollout(
-                    rollout_info["observations"],
-                    rollout_info["actions"],
-                    rollout_info["rollout_rewardTotal"],
-                    rollout_info["starting_state"]
-                )
-
-                rollouts_rand.append(rollout)
-
-
-
 
             # convert (rollouts --> dataset)
             dataset_rand_new = data_processor.convertRolloutsToDatasets(rollouts_rand)

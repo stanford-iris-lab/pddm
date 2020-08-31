@@ -78,7 +78,8 @@ class MPCRollout:
         controller_type,
         take_exploratory_actions=False,
         isRandom=False,
-        use_disc=False
+        use_disc=False,
+        random_sampling_params=None
     ):
         """
         Args:
@@ -188,7 +189,8 @@ class MPCRollout:
             # curr_state_K : past K states
             # actions_taken : past all actions (taken so far in this rollout)
             if isRandom:
-                best_action, _ = self.rand_policy.get_action(None, None)
+                assert random_sampling_params is not None, "Provide random sampling params."
+                best_action, _ = self.rand_policy.get_action(None, None, random_sampling_params)
             else:
                 # predicted_states_list.shape: [ensemble_size, horizon+1, N, state_size]
                 best_action, predicted_states_list = get_action(

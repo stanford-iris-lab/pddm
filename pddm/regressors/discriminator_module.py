@@ -174,9 +174,6 @@ class Discriminator:
 
         self.predicted_outputs = self.curr_nn_outputs
         
-        
-
-
     # train: actual_transitions, predicted_transitions 
 
     def train(
@@ -199,7 +196,6 @@ class Discriminator:
         inputs_val = None
         outputs_val = None
         ##############################
-
         
         # init vars
         np.random.seed()
@@ -330,7 +326,7 @@ class Discriminator:
                     # print("    val rand: ", val_loss_rand)
                     print("    val onPol: ", val_loss_onPol)
 
-                    if wandb is not None: 
+                    if wandb == True: 
                         wandb.log({
                             "model_disc/disc_train_loss": mean_training_loss,
                             # "model_disc/val_loss_rand": val_loss_rand,

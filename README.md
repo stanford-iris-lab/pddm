@@ -1,8 +1,17 @@
 # Importance weighting for PDDM
 
+# TODO: 
+- [x] train model on [model + disc] data 
+- [x] plan with disc
+- [x] random data collection 
+- [ ] train disc on random data
+- [x] ensembles
+- [ ] stochastic forward models
+- [x] add wandb
+- [ ] video rendering
+- [ ] load runs (not important for now)
+
 Based on [[Project Page]](https://bit.ly/pddm2019) [[Paper]](https://arxiv.org/abs/1909.11652).
-
-
 
 <img src="https://github.com/google-research/pddm/blob/master/pddm/gifs/dclaw_gif.gif" height="200" /> <img src="https://github.com/google-research/pddm/blob/master/pddm/gifs/cube_gif.gif" height="200" /> <img src="https://github.com/google-research/pddm/blob/master/pddm/gifs/handwriting_gif.gif" height="200" /> <img src="https://github.com/google-research/pddm/blob/master/pddm/gifs/baoding_gif.gif" height="200" />
 
@@ -16,8 +25,8 @@ Please note that this is research code, and as such, is still under construction
 **Contents of this README:**
 - [Getting Started](#a-getting-started)
 - [Quick Overview](b-quick-overview)
-<!-- - [Train and visualize some tests](#c-train-and-visualize-some-tests) -->
 - [Run experiments](#d-run-experiments)
+<!-- - [Train and visualize some tests](#c-train-and-visualize-some-tests) -->
 <br/><br/>
 
 
