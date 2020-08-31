@@ -1,12 +1,14 @@
-# TODO: train model on [model + disc] data 
-# TODO: plan with disc
-# TODO: random data collection (+ mix random data with onPol data)
-# TODO: load runs
-# TODO: ensembles
-# TODO: stochastic forward models
+# TODO: 
+# [x] train model on [model + disc] data 
+# [x] plan with disc
+# [ ] random data collection (+ mix random data with onPol data)
+# [-] load runs
+# [ ] ensembles
+# [ ] stochastic forward models
+# [x] add wandb
+# [ ] video rendering
 
 import os
-
 os.environ["MKL_THREADING_LAYER"] = "GNU"
 import numpy as np
 import numpy.random as npr
@@ -15,6 +17,7 @@ import pickle
 import sys
 import argparse
 import traceback
+import wandb
 
 
 # my imports
@@ -33,9 +36,11 @@ from pddm.utils import config_reader
 SCRIPT_DIR = os.path.dirname(__file__)
 
 
-
-
 def run_job(args, save_dir=None):
+
+    if args.wandb:
+        wandb.init(project="pddm-rollouts")
+
 
     # Continue training from an existing iteration
     if args.continue_run > -1:
@@ -90,7 +95,8 @@ def run_job(args, save_dir=None):
         args.dt_from_xml = dt_from_xml
         random_policy = Policy_Random(env.env)
 
-        # doing a render here somehow allows it to not produce a seg fault error later when visualizing
+        # doing a render here somehow allows it to not produce 
+        # a seg fault error later when visualizing.
         if args.visualize_MPC_rollout:
             render_env(env)
             render_stop(env)
@@ -99,7 +105,6 @@ def run_job(args, save_dir=None):
         ################## Initialize or Load Run ##################
         ############################################################
 
-        """What is this for?"""
         # Check whether each datapoint should be duplicated. 
         # e.g., for baoding, since ballA/B are interchangeable, we store as 2 different points.
         if "duplicateData_switchObjs" in dir(env.unwrapped_env):
@@ -276,7 +281,6 @@ def run_job(args, save_dir=None):
             data_processor.update_stats(
                 dyn_models, dataset_trainRand, dataset_trainOnPol
             )
-
          
             # preprocess datasets to mean0/std1 + clip actions
             preprocessed_data_trainRand = data_processor.preprocess_data(dataset_trainRand)
@@ -343,33 +347,10 @@ def run_job(args, save_dir=None):
             # restore or train model.
             # TODO: add disc to loading mode.
             if args.always_use_savedModel:
-                if continue_run > 0:
-                    restore_path = (
-                        save_dir
-                        + "/models/model_aggIter"
-                        + str(continue_run - 1)
-                        + ".ckpt"
-                    )
-                else:
-                    restore_path = save_dir + "/models/finalModel.ckpt"
-
-                saver.tf_saver.restore(sess, restore_path)
-                print("\n\nModel restored from ", restore_path, "\n\n")
-
-                # empty vars, for saving
-                training_loss = 0
-                training_lists_to_save = dict(
-                    training_loss_list=0,
-                    val_loss_list_rand=0,
-                    val_loss_list_onPol=0,
-                    val_loss_list_xaxis=0,
-                    rand_loss_list=0,
-                    onPol_loss_list=0,
-                )
+                raise NotImplementedError
             else:
                 # Train model 
                 ## Training on random and on policy data. 
-
                 training_loss, training_lists_to_save = dyn_models.train(
                     inputs,
                     outputs,
@@ -380,9 +361,8 @@ def run_job(args, save_dir=None):
                     outputs_val=outputs_val,
                     inputs_val_onPol=inputs_val_onPol,
                     outputs_val_onPol=outputs_val_onPol,
+                    wandb=wandb
                 )
-
-               
 
             # saving rollout info
             rollouts_info = []
@@ -418,6 +398,9 @@ def run_job(args, save_dir=None):
                     controller_type=args.controller_type,
                     take_exploratory_actions=False,
                 )
+
+                if args.wandb:
+                    wandb.log({"model_only/rollout_reward": rollout_info['rollout_rewardTotal']})
                 
 
                 """
@@ -471,8 +454,6 @@ def run_job(args, save_dir=None):
             rollouts_train = []
             rollouts_val = []
 
-
-
             for i in range(num_mpc_rollouts):
                 rollout = Rollout(
                     rollouts_info[i]["observations"],
@@ -485,8 +466,6 @@ def run_job(args, save_dir=None):
                     rollouts_train.append(rollout)
                 else:
                     rollouts_val.append(rollout)
-
-
 
             """Create disc data"""
             disc_real_transitions_train = []
@@ -626,9 +605,6 @@ def run_job(args, save_dir=None):
             # inputs, outputs = disc_data_processor.xyz_to_inpOutp(preprocessed_data_trainRand)
             # inputs_val, outputs_val = disc_data_processor.xyz_to_inpOutp(preprocessed_data_valRand)
             
-            # inputs_onPol, outputs_onPol = disc_data_processor.xyz_to_inpOutp(preprocessed_data_trainOnPol)
-            # inputs_val_onPol, outputs_val_onPol = disc_data_processor.xyz_to_inpOutp(preprocessed_data_valOnPol)
-
             disc_inputs_onPol, disc_outputs_onPol = disc_data_processor.xyz_to_disc_io(preprocessed_disc_data_trainOnPol_real, preprocessed_disc_data_trainOnPol_pred)
             disc_inputs_val_onPol, disc_outputs_val_onPol = disc_data_processor.xyz_to_disc_io(preprocessed_disc_data_valOnPol_real, preprocessed_disc_data_valOnPol_pred)
 
@@ -729,6 +705,7 @@ def run_job(args, save_dir=None):
                     outputs_val=outputs_val,
                     inputs_val_onPol=disc_inputs_val_onPol,
                     outputs_val_onPol=disc_outputs_val_onPol,
+                    wandb=wandb
                 )
             
             # saving rollout info
@@ -766,6 +743,9 @@ def run_job(args, save_dir=None):
                     take_exploratory_actions=False,
                     use_disc=True
                 )
+
+                if args.wandb:
+                    wandb.log({"model_disc/rollout_reward": rollout_info['rollout_rewardTotal']})
 
                 """
                 NOTE: can sometimes set take_exploratory_actions=True
@@ -913,10 +893,12 @@ def main():
             "working directory"
         ),
     )
-
+    parser.add_argument("--wandb", action="store_true")
     parser.add_argument("--use_gpu", action="store_true")
     parser.add_argument("-frac", "--gpu_frac", type=float, default=0.9)
     general_args = parser.parse_args()
+
+    
 
     #####################
     # job configs
@@ -946,6 +928,7 @@ def main():
         # copy some general_args into args
         args.use_gpu = general_args.use_gpu
         args.gpu_frac = general_args.gpu_frac
+        args.wandb = general_args.wandb
 
         # directory name for this experiment
         job["output_dir"] = os.path.join(output_dir, job["job_name"])

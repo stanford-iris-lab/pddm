@@ -7,3 +7,4 @@ pddm/output*
 pddm/delete*
 env/
 ._setup.py
+*wandb*

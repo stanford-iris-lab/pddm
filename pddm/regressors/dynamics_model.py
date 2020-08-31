@@ -114,6 +114,7 @@ class Dyn_Model:
         outputs_val=None,
         inputs_val_onPol=None,
         outputs_val_onPol=None,
+        wandb=None
     ):
 
         # init vars
@@ -248,6 +249,13 @@ class Dyn_Model:
                     print("    train loss: ", mean_training_loss)
                     print("    val rand: ", val_loss_rand)
                     print("    val onPol: ", val_loss_onPol)
+
+                    if wandb is not None: 
+                        wandb.log({
+                            "model_only/model_train_loss": mean_training_loss,
+                            "model_only/val_loss_rand": val_loss_rand,
+                            "model_only/val_loss_onPol": val_loss_onPol,
+                        })
 
         if not self.print_minimal:
             print("Training duration: {:0.2f} s".format(time.time() - start))

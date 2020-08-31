@@ -190,6 +190,7 @@ class Discriminator:
         outputs_val=None,
         inputs_val_onPol=None,
         outputs_val_onPol=None,
+        wandb=None
     ):
         
         # Random not implemented yet #
@@ -328,6 +329,13 @@ class Discriminator:
                     print("    train loss: ", mean_training_loss)
                     # print("    val rand: ", val_loss_rand)
                     print("    val onPol: ", val_loss_onPol)
+
+                    if wandb is not None: 
+                        wandb.log({
+                            "model_disc/disc_train_loss": mean_training_loss,
+                            # "model_disc/val_loss_rand": val_loss_rand,
+                            "model_disc/val_loss_onPol": val_loss_onPol,
+                        })
 
         if not self.print_minimal:
             print("Training duration: {:0.2f} s".format(time.time() - start))

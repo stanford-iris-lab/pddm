@@ -216,11 +216,6 @@ class MPPI(object):
         else: 
             mean_feasibility_probs = None
 
-                # assert False, mean_feasibility_probs.shape
-
-
-            # raise NotImplementedError
-
         # calculate costs [N,]
         costs, mean_costs, std_costs = calculate_costs(
             resulting_states_list,
@@ -231,7 +226,6 @@ class MPPI(object):
             disc_logits=mean_feasibility_probs
         )
         
-        """Haven't checked after this"""
 
         # uses all paths to update action mean (for horizon steps)
         # Note: mppi_update needs rewards, so pass in -costs

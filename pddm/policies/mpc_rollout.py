@@ -190,7 +190,7 @@ class MPCRollout:
             if isRandom:
                 best_action, _ = self.rand_policy.get_action(None, None)
             else:
-                """predicted_states_list.shape: [ensemble_size, horizon+1, N, statesize]"""
+                # predicted_states_list.shape: [ensemble_size, horizon+1, N, state_size]
                 best_action, predicted_states_list = get_action(
                     step,
                     curr_state_K,
@@ -208,10 +208,10 @@ class MPCRollout:
             resulting_states_list = self.dyn_models.do_forward_sim(
                     [curr_state_K, 0], np.copy(reshaped_selected_action)
                 )
-            """resulting_states_list.shape: [ensemble_size, horizon+1, N, statesize]"""
             resulting_states_list = np.swapaxes(
                     resulting_states_list, 0, 1
-                )  # [ensSize, horizon+1, N, statesize]
+                )  
+            # resulting_states_list.shape: [ensemble_size, horizon+1, N, state_size]
             predicted_next_state = np.array(resulting_states_list)[:, -1,-1,:]
             mean_predicted_next_state = np.mean(predicted_next_state, axis=0)
             

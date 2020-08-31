@@ -8,6 +8,7 @@ import pickle
 import sys
 import argparse
 import traceback
+import wandb
 
 
 # my imports
@@ -26,6 +27,9 @@ SCRIPT_DIR = os.path.dirname(__file__)
 
 
 def run_job(args, save_dir=None):
+
+    if args.wandb:
+        wandb.init(project="pddm-rollouts")
 
     # Continue training from an existing iteration
     if args.continue_run > -1:
@@ -360,6 +364,7 @@ def run_job(args, save_dir=None):
                     outputs_val=outputs_val,
                     inputs_val_onPol=inputs_val_onPol,
                     outputs_val_onPol=outputs_val_onPol,
+                    wandb=wandb
                 )
 
             # saving rollout info
@@ -396,6 +401,9 @@ def run_job(args, save_dir=None):
                     controller_type=args.controller_type,
                     take_exploratory_actions=False,
                 )
+
+                if args.wandb:
+                    wandb.log({"model_only/rollout_reward": rollout_info['rollout_rewardTotal']})
 
                 # Note: can sometimes set take_exploratory_actions=True
                 # in order to use ensemble disagreement for exploration
@@ -541,6 +549,7 @@ def main():
         ),
     )
 
+    parser.add_argument("--wandb", action="store_true")
     parser.add_argument("--use_gpu", action="store_true")
     parser.add_argument("-frac", "--gpu_frac", type=float, default=0.9)
     general_args = parser.parse_args()
@@ -573,6 +582,7 @@ def main():
         # copy some general_args into args
         args.use_gpu = general_args.use_gpu
         args.gpu_frac = general_args.gpu_frac
+        args.wandb = general_args.wandb
 
         # directory name for this experiment
         job["output_dir"] = os.path.join(output_dir, job["job_name"])

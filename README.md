@@ -1,8 +1,12 @@
-# PDDM
+# Importance weighting for PDDM
+
+Based on [[Project Page]](https://bit.ly/pddm2019) [[Paper]](https://arxiv.org/abs/1909.11652).
+
+
 
 <img src="https://github.com/google-research/pddm/blob/master/pddm/gifs/dclaw_gif.gif" height="200" /> <img src="https://github.com/google-research/pddm/blob/master/pddm/gifs/cube_gif.gif" height="200" /> <img src="https://github.com/google-research/pddm/blob/master/pddm/gifs/handwriting_gif.gif" height="200" /> <img src="https://github.com/google-research/pddm/blob/master/pddm/gifs/baoding_gif.gif" height="200" />
 
-[[Project Page]](https://bit.ly/pddm2019) [[Paper]](https://arxiv.org/abs/1909.11652)
+
 
 **Deep Dynamics Models for Learning Dexterous Manipulation**<br/>
 [Anusha Nagabandi](https://people.eecs.berkeley.edu/~nagaban2/), Kurt Konolige, Sergey Levine, [Vikash Kumar](https://vikashplus.github.io/).
@@ -117,13 +121,15 @@ MJPL python visualize_iteration.py --job_path ../output/baoding_gt --iter_num 0
 
 **Train:**
 
+Importance Weighting 
 ```bash
-python train.py --config ../config/dclaw_turn.txt --output_dir ../output --use_gpu
-python train.py --config ../config/baoding.txt --output_dir ../output --use_gpu
-python train.py --config ../config/cube.txt --output_dir ../output --use_gpu
+python train_iw.py --config ../config/cheetah.txt --output_dir ../output --use_gpu
+python train_iw.py --config ../config/dclaw_turn.txt --output_dir ../output --use_gpu
+python train_iw.py --config ../config/baoding.txt --output_dir ../output --use_gpu
+python train_iw.py --config ../config/cube.txt --output_dir ../output --use_gpu
 ```
-
-**Evaluate a pre-trained model:**
+use `--wandb` for logging results. To run the experiments without importance weighting, run `train.py` instead. 
+<!-- **Evaluate a pre-trained model:**
 
 ```bash
 python eval_iteration.py --job_path ../output/dclaw_turn --iter_num 0 --num_eval_rollouts 1 --eval_run_length 40
@@ -142,4 +148,4 @@ Plot rewards (or scores) of multiple runs on the same plot. Note that custom lab
 ```bash
 python compare_results.py -j ../output/runA ../output/runB -l 'mycustomlabel runA' -l 'mycustomlabel runB' --plot_rew
 python compare_results.py -j ../output/runA ../output/runB -l 'mycustomlabel runA' -l 'mycustomlabel runB'
-```
+``` -->
