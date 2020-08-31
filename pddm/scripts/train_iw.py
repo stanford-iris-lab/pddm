@@ -351,7 +351,7 @@ def run_job(args, save_dir=None):
                     outputs_val=outputs_val,
                     inputs_val_onPol=inputs_val_onPol,
                     outputs_val_onPol=outputs_val_onPol,
-                    wandb=wandb
+                    wandb=wandb if args.wandb else None
                 )
 
             # saving rollout info
@@ -706,7 +706,7 @@ def run_job(args, save_dir=None):
                 """What is this expansion for?"""
                 disc_inputs_onPol = np.expand_dims(disc_inputs_onPol, axis = 1)
                 disc_outputs_onPol = np.expand_dims(disc_outputs_onPol, axis = 1)
-
+                
                 disc_inputs_val_onPol = np.expand_dims(disc_inputs_val_onPol, axis = 1)
                 disc_outputs_val_onPol = np.expand_dims(disc_outputs_val_onPol, axis = 1)
 
@@ -721,7 +721,7 @@ def run_job(args, save_dir=None):
                     outputs_val=outputs_val,
                     inputs_val_onPol=disc_inputs_val_onPol,
                     outputs_val_onPol=disc_outputs_val_onPol,
-                    wandb=wandb
+                    wandb=wandb if args.wandb else None
                 )
             
             # saving rollout info

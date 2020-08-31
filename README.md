@@ -10,6 +10,7 @@
 - [x] add wandb
 - [ ] video rendering
 - [ ] load runs (not important for now)
+- [ ] discrimnator metrics (auc, precision, recall).
 
 Based on [[Project Page]](https://bit.ly/pddm2019) [[Paper]](https://arxiv.org/abs/1909.11652).
 

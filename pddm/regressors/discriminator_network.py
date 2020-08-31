@@ -54,6 +54,6 @@ def discriminator_network(
             biases_initializer=initializer,
             reuse=reuse,
             trainable=True,
-        )
+        ) 
 
     return z

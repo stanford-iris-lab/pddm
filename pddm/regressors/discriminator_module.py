@@ -155,10 +155,13 @@ class Discriminator:
             self.probs.append(tf.nn.softmax(logits=this_output, axis=1))
 
             this_cross_entropy = tf.nn.softmax_cross_entropy_with_logits(
-                labels=self.labels_, logits=this_output
+                labels=self.labels_, 
+                logits=this_output, 
+                dim = 0
             )
+            
             self.ces.append(this_cross_entropy)
-
+            
             # this network's weights
             this_theta = tf.get_collection(
                 tf.GraphKeys.TRAINABLE_VARIABLES, scope=f"disc_{i}"
@@ -170,6 +173,7 @@ class Discriminator:
                 for g, v in self.opt.compute_gradients(this_cross_entropy, this_theta)
                 if g is not None
             ]
+            
             self.train_steps.append(self.opt.apply_gradients(gv))
 
         self.predicted_outputs = self.curr_nn_outputs
@@ -253,7 +257,7 @@ class Discriminator:
                 ########## one iteration of feedforward training ##########
                 ###########################################################
 
-                # this_dataX: [ensemble_size, batch_size, K, state_size * 2 + action_size]
+                # this_dataX: [ensemble_size, batch_size, K, state_size + action_size + state_size]
                 this_dataX = np.tile(data_inputs_batch, (self.disc_ensemble_size, 1, 1, 1))
                 
                 _, losses, outputs, true_output = self.sess.run(
@@ -263,6 +267,7 @@ class Discriminator:
                         self.labels_: data_outputs_batch,
                     },
                 )
+                
                 loss = np.mean(losses)
 
                 training_loss_list.append(loss)
@@ -326,7 +331,7 @@ class Discriminator:
                     # print("    val rand: ", val_loss_rand)
                     print("    val onPol: ", val_loss_onPol)
 
-                    if wandb == True: 
+                    if wandb is not None: 
                         wandb.log({
                             "model_disc/disc_train_loss": mean_training_loss,
                             # "model_disc/val_loss_rand": val_loss_rand,

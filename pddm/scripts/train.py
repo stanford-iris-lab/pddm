@@ -364,7 +364,7 @@ def run_job(args, save_dir=None):
                     outputs_val=outputs_val,
                     inputs_val_onPol=inputs_val_onPol,
                     outputs_val_onPol=outputs_val_onPol,
-                    wandb=wandb
+                    wandb=wandb if args.wandb else None
                 )
 
             # saving rollout info
