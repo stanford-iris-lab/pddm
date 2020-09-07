@@ -113,7 +113,7 @@ class Dyn_Model:
         outputs_val=None,
         inputs_val_onPol=None,
         outputs_val_onPol=None,
-        wandb=None
+        wandb=None,
     ):
 
         # init vars
@@ -171,7 +171,7 @@ class Dyn_Model:
 
 
                 """
-                TODO: move to correct place. 
+                TODO: move this note to the correct place. 
 
                 Forward Model information:
                     Input: (ensemble_size, batch_size, K, state_size + action_size)
@@ -253,7 +253,7 @@ class Dyn_Model:
                         wandb.log({
                             "model_only/model_train_loss": mean_training_loss,
                             "model_only/val_loss_rand": val_loss_rand,
-                            "model_only/val_loss_onPol": val_loss_onPol,
+                            "model_only/val_loss_onPol": val_loss_onPol,        
                         })
 
         if not self.print_minimal:

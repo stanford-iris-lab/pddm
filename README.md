@@ -1,16 +1,18 @@
 # Importance weighting for PDDM
 
 # TODO: 
+- [x] fix disc training bug
 - [x] train model on [model + disc] data 
 - [x] plan with disc
 - [x] random data collection 
-- [ ] train disc on random data
+- [x] train disc on random data
 - [x] ensembles
 - [ ] stochastic forward models
 - [x] add wandb
 - [ ] video rendering
 - [ ] load runs (not important for now)
 - [ ] discrimnator metrics (auc, precision, recall).
+- [ ] check if normalization is done right. 
 
 Based on [[Project Page]](https://bit.ly/pddm2019) [[Paper]](https://arxiv.org/abs/1909.11652).
 

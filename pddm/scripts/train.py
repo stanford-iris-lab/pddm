@@ -402,10 +402,22 @@ def run_job(args, save_dir=None):
                     take_exploratory_actions=False,
                 )
 
-                
 
+                predictions = model_errors = [np.linalg.norm(rollout_info['predicted_next_state'][t,:], ord=2) for t in range(rollout_info['observations'].shape[0] - 1)]
+                model_errors = [np.linalg.norm((rollout_info['observations'][t + 1,:] - rollout_info['observations'][t,:]) - rollout_info['predicted_next_state'][t,:], ord=2) for t in range(rollout_info['observations'].shape[0] - 1)]
+                model_errors_non_diff = [np.linalg.norm(rollout_info['observations'][t + 1,:] - rollout_info['predicted_next_state'][t,:], ord=2) for t in range(rollout_info['observations'].shape[0] - 1)]
+                print("model_errors", np.mean(model_errors))
+                print("model_errors_non_diff", np.mean(model_errors_non_diff))
+                print("predicton magnitude", np.mean(predictions))
                 if args.wandb:
-                    wandb.log({"model_only/rollout_reward": rollout_info['rollout_rewardTotal']})
+                    wandb.log({
+                            "model_only/rollout_reward": rollout_info['rollout_rewardTotal'],
+                            "model_only/average_model_error": float(np.mean(model_errors)),
+                        })
+
+
+                # if args.wandb:
+                #     wandb.log({"model_only/rollout_reward": rollout_info['rollout_rewardTotal']})
 
                 # Note: can sometimes set take_exploratory_actions=True
                 # in order to use ensemble disagreement for exploration

@@ -60,7 +60,7 @@ class MPPI(object):
         """Unused variables, setting them to None just to be sure"""
         mean_scores = None
         std_scores = None
-
+        
         #########################
         ## how each sim's score compares to the best score
         ##########################

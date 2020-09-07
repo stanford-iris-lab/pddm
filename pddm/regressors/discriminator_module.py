@@ -9,6 +9,14 @@ from tensorflow.keras.backend import sigmoid
 # my imports
 from pddm.regressors.discriminator_network import discriminator_network
 
+from sklearn.metrics import (
+    roc_curve,
+    auc,
+    accuracy_score,
+    precision_score,
+    recall_score,
+)
+
 
 class Discriminator:
     """
@@ -113,7 +121,7 @@ class Discriminator:
                         self.inputs_: input_data,
                     },
                 )
-        probs = np.reshape(np.array(probs), np.array(probs).shape[1:-1])
+        probs = np.reshape(np.array(probs), np.array(probs).shape[1:-1]) 
 
         return probs 
         
@@ -136,6 +144,8 @@ class Discriminator:
         self.ces = [] # Cross entropy losses
         self.train_steps = []
         self.probs = []
+        self.aucs = []
+        self.accuracies = []
 
         for i in range(self.disc_ensemble_size):
 
@@ -152,15 +162,25 @@ class Discriminator:
 
             # loss of this network's predictions
             # this_cross_entropy = tf.reduce_mean(tf.square(self.labels_ - this_output))
-            self.probs.append(tf.nn.softmax(logits=this_output, axis=1))
-
-            this_cross_entropy = tf.nn.softmax_cross_entropy_with_logits(
+            curr_probs = tf.nn.softmax(logits=this_output, axis=1)
+            self.probs.append(curr_probs)
+            # CE Loss
+            this_cross_entropy = tf.nn.sigmoid_cross_entropy_with_logits(
                 labels=self.labels_, 
                 logits=this_output, 
-                dim = 0
             )
-            
             self.ces.append(this_cross_entropy)
+            # Accuracy 
+            accuracy = tf.metrics.accuracy(
+                labels=self.labels_, 
+                predictions=(this_output > 0.5)
+            )
+            self.accuracies.append(accuracy)
+            
+
+            auc = tf.metrics.auc(labels=self.labels_, predictions=curr_probs)
+            self.aucs.append(auc)
+
             
             # this network's weights
             this_theta = tf.get_collection(
@@ -191,14 +211,14 @@ class Discriminator:
         outputs_val=None,
         inputs_val_onPol=None,
         outputs_val_onPol=None,
-        wandb=None
+        wandb=None, 
     ):
         
         # Random not implemented yet #
-        data_inputs_rand = None
-        data_outputs_rand = None
-        inputs_val = None
-        outputs_val = None
+        # data_inputs_rand = None
+        # data_outputs_rand = None
+        # inputs_val = None
+        # outputs_val = None
         ##############################
         
         # init vars
@@ -213,15 +233,15 @@ class Discriminator:
 
         # combine rand+onPol into 1 dataset
         if data_inputs_onPol.shape[0] > 0:
-            data_inputs = data_inputs_onPol # np.concatenate((data_inputs_rand, data_inputs_onPol))
-            data_outputs = data_outputs_onPol # np.concatenate((data_outputs_rand, data_outputs_onPol))
+            data_inputs = np.concatenate((data_inputs_rand, data_inputs_onPol))
+            data_outputs = np.concatenate((data_outputs_rand, data_outputs_onPol))
         else:
             raise NotImplementedError
             data_inputs = data_inputs_rand.copy()
             data_outputs = data_outputs_rand.copy()
 
         # dims
-        nData_rand = 0 # data_inputs_rand.shape[0]
+        nData_rand = data_inputs_rand.shape[0]
         nData_onPol = data_inputs_onPol.shape[0]
         nData = nData_rand + nData_onPol
         
@@ -267,7 +287,7 @@ class Discriminator:
                         self.labels_: data_outputs_batch,
                     },
                 )
-                
+
                 loss = np.mean(losses)
 
                 training_loss_list.append(loss)
@@ -279,7 +299,7 @@ class Discriminator:
             if (i % 10 == 0) or (i == (nEpoch - 1)):
 
                 # if inputs_val is None:
-                #     pass
+                    # pass
 
                 # else:
                 #######################################
@@ -287,8 +307,8 @@ class Discriminator:
                 #######################################
 
                 # loss on validation set
-                # val_loss_rand = self.get_loss(inputs_val, outputs_val)
-                # val_loss_list_rand.append(val_loss_rand)
+                val_loss_rand, val_auc_rand, val_acc_rand = self.get_loss(inputs_val, outputs_val)
+                val_loss_list_rand.append(val_loss_rand)
                 val_loss_list_xaxis.append(len(training_loss_list))
 
                 ########################################
@@ -296,29 +316,30 @@ class Discriminator:
                 ########################################
 
                 # loss on on-pol validation set
-                val_loss_onPol = self.get_loss(inputs_val_onPol, outputs_val_onPol)
+                val_loss_onPol, val_auc_onPol, val_acc_onPol = self.get_loss(inputs_val_onPol, outputs_val_onPol)
                 val_loss_list_onPol.append(val_loss_onPol)
 
                 #######################################
                 ######## training loss on rand ########
                 #######################################
 
-                # loss_rand = self.get_loss(
-                #     data_inputs_rand,
-                #     data_outputs_rand,
-                #     fraction_of_data=0.5,
-                #     shuffle_data=True,
-                # )
-                # rand_loss_list.append(loss_rand)
+                loss_rand, auc_rand, acc_rand = self.get_loss(
+                    inputs=data_inputs_rand,
+                    outputs=data_outputs_rand,
+                    fraction_of_data=0.5,
+                    shuffle_data=True,
+                )
+                rand_loss_list.append(loss_rand)
 
                 ##############################
                 ####### training loss on onPol
                 ##############################
 
                 if nData_onPol > 0:
-                    loss_onPol = self.get_loss(
-                        data_inputs_onPol,
-                        data_outputs_onPol,
+                    print(f"data_inputs_onPol.shape: {data_inputs_onPol.shape}\ndata_outputs_onPol.shape: {data_outputs_onPol.shape}")
+                    loss_onPol, auc_onPol, acc_onPol = self.get_loss(
+                        inputs=data_inputs_onPol,
+                        outputs=data_outputs_onPol,
                         fraction_of_data=0.5,
                         shuffle_data=True,
                     )
@@ -328,14 +349,23 @@ class Discriminator:
                 if (i % 10) == 0 or (i == (nEpoch - 1)):
                     print("\n=== Discriminator Epoch {} ===".format(i))
                     print("    train loss: ", mean_training_loss)
-                    # print("    val rand: ", val_loss_rand)
+                    print("    val rand: ", val_loss_rand)
                     print("    val onPol: ", val_loss_onPol)
 
                     if wandb is not None: 
                         wandb.log({
                             "model_disc/disc_train_loss": mean_training_loss,
-                            # "model_disc/val_loss_rand": val_loss_rand,
+                            "model_disc/val_loss_rand": val_loss_rand,
                             "model_disc/val_loss_onPol": val_loss_onPol,
+                            "model_disc/auc_rand": auc_rand,
+                            "model_disc/auc_onPol": auc_onPol,
+                            "model_disc/val_auc_rand": val_auc_rand,
+                            "model_disc/val_auc_onPol": val_auc_onPol,
+                            "model_disc/acc_rand": acc_rand,
+                            "model_disc/acc_onPol": acc_onPol,
+                            "model_disc/val_acc_rand": val_acc_rand,
+                            "model_disc/val_acc_onPol": val_acc_onPol,
+                            "model_disc/loss_onPol": loss_onPol,
                         })
 
         if not self.print_minimal:
@@ -361,6 +391,9 @@ class Discriminator:
         nData = inputs.shape[0]
         avg_loss = 0
         iters_in_batch = 0
+
+        all_aucs = []
+        all_accs = []
 
         if shuffle_data:
             range_of_indices = np.arange(inputs.shape[0])
@@ -389,19 +422,28 @@ class Discriminator:
             # one iteration of feedforward training
             this_dataX = np.tile(dataX_batch, (self.disc_ensemble_size, 1, 1, 1))
             
-            z_predictions_multiple, losses = self.sess.run(
-                [self.curr_nn_outputs, self.ces],
+            z_predictions_multiple, losses, aucs, accuracies = self.sess.run(
+                [self.curr_nn_outputs, self.ces, self.aucs, self.accuracies],
                 feed_dict={self.inputs_: this_dataX, self.labels_: dataZ_batch},
             )
             loss = np.mean(losses)
+            all_accs += accuracies
+        
+            fpr, tpr, thresholds = roc_curve(
+                np.squeeze(dataZ_batch), np.squeeze(z_predictions_multiple)
+            )
+            all_aucs += [auc(fpr, tpr)]
 
             avg_loss += loss
             iters_in_batch += 1
 
         if iters_in_batch == 0:
-            return 0
+            return 0, 0, 0
         else:
-            return avg_loss / iters_in_batch
+            Auc = np.mean(all_aucs)
+            accuracy = np.mean(all_accs)
+
+            return avg_loss / iters_in_batch, Auc, accuracy
 
     #############################################################
     ### perform multistep prediction

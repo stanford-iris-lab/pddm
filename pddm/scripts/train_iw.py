@@ -31,7 +31,6 @@ def run_job(args, save_dir=None):
     if args.wandb:
         wandb.init(project="pddm-rollouts")
 
-
     # Continue training from an existing iteration
     if args.continue_run > -1:
         save_dir = os.path.join(SCRIPT_DIR, args.continue_run_filepath)
@@ -39,14 +38,16 @@ def run_job(args, save_dir=None):
     tf.reset_default_graph()
     with tf.Session(config=get_gpu_config(args.use_gpu, args.gpu_frac)) as sess:
 
+        """
         ###########################################################################################################################################
         ############################################################## Initialization #############################################################
         ###########################################################################################################################################
-
+        """
 
         ############################################################
         ########## initialize some parameters (from args) ##########
         ############################################################
+        
 
         env_name = args.env_name
         continue_run = args.continue_run
@@ -120,11 +121,15 @@ def run_job(args, save_dir=None):
 
         # start a fresh run
         if continue_run == -1:
+            
+            #############################################################
+            ######### random training/validation data for model #########
+            #############################################################
 
-            # random training/validation data
+            # TODO: Load or Generate random data
             if args.load_existing_random_data:
                 raise NotImplementedError
-                rollouts_trainRand, rollouts_valRand = loader.load_initialData()
+                # rollouts_trainRand, rollouts_valRand = loader.load_initialData()
             else:
                 # training
                 rollouts_trainRand = collect_random_rollouts(
@@ -150,8 +155,14 @@ def run_job(args, save_dir=None):
                 rollouts_trainRand
             )
             dataset_valRand = data_processor.convertRolloutsToDatasets(rollouts_valRand)
+            # Dataset for discrimiantor random agent data
+            # dataset_disc_trainRand = Dataset()
+            # dataset_disc_valRand = Dataset()
 
-            # onPol train/val data
+            #############################################################
+            ######## onPolicy training/validation data for model ########
+            #############################################################
+            
             dataset_trainOnPol = Dataset()
             rollouts_trainOnPol = []
             rollouts_valOnPol = []
@@ -162,6 +173,11 @@ def run_job(args, save_dir=None):
             disc_valOnPol_real = []
             disc_valOnPol_pred = []
 
+            # random disc train/val data 
+            disc_rand_trainOnPol_real = []            
+            disc_rand_trainOnPol_pred = []
+            disc_rand_valOnPol_real = []
+            disc_rand_valOnPol_pred = []            
 
             # lists for saving
             trainingLoss_perIter = []
@@ -172,35 +188,35 @@ def run_job(args, save_dir=None):
             # initialize counter
             counter = 0
 
-        # continue from an existing run
+        # TODO: continue from an existing run
         else:
             raise NotImplementedError
-            # load data
-            iter_data = loader.load_iter(continue_run - 1)
+            # # load data
+            # iter_data = loader.load_iter(continue_run - 1)
 
-            # random data
-            rollouts_trainRand, rollouts_valRand = loader.load_initialData()
+            # # random data
+            # rollouts_trainRand, rollouts_valRand = loader.load_initialData()
 
-            # onPol data
-            rollouts_trainOnPol = iter_data.train_rollouts_onPol
-            rollouts_valOnPol = iter_data.val_rollouts_onPol
+            # # onPol data
+            # rollouts_trainOnPol = iter_data.train_rollouts_onPol
+            # rollouts_valOnPol = iter_data.val_rollouts_onPol
 
-            # convert (rollouts --> dataset)
-            dataset_trainRand = data_processor.convertRolloutsToDatasets(
-                rollouts_trainRand
-            )
-            dataset_valRand = data_processor.convertRolloutsToDatasets(rollouts_valRand)
+            # # convert (rollouts --> dataset)
+            # dataset_trainRand = data_processor.convertRolloutsToDatasets(
+            #     rollouts_trainRand
+            # )
+            # dataset_valRand = data_processor.convertRolloutsToDatasets(rollouts_valRand)
 
-            # lists for saving
-            trainingLoss_perIter = iter_data.training_losses
-            rew_perIter = iter_data.rollouts_rewardsPerIter
-            scores_perIter = iter_data.rollouts_scoresPerIter
-            trainingData_perIter = iter_data.training_numData
+            # # lists for saving
+            # trainingLoss_perIter = iter_data.training_losses
+            # rew_perIter = iter_data.rollouts_rewardsPerIter
+            # scores_perIter = iter_data.rollouts_scoresPerIter
+            # trainingData_perIter = iter_data.training_numData
 
-            # initialize counter
-            counter = continue_run
-            # how many iters to train for
-            num_iters += continue_run
+            # # initialize counter
+            # counter = continue_run
+            # # how many iters to train for
+            # num_iters += continue_run
 
         ### check data dims
         inputSize, outputSize, acSize = check_dims(dataset_trainRand, env)
@@ -216,7 +232,6 @@ def run_job(args, save_dir=None):
 
         discriminator = Discriminator(inputSize*2 - acSize, acSize, sess, params=args)
         
-        
         mpc_rollout = MPCRollout(
             env,
             dyn_models,
@@ -228,7 +243,11 @@ def run_job(args, save_dir=None):
         )
 
         # Initialize TF variables
-        sess.run(tf.global_variables_initializer())
+        # sess.run(tf.global_variables_initializer())
+        sess.run(tf.group(tf.global_variables_initializer(), tf.local_variables_initializer()))
+        
+
+
 
         # Initialiaze saver
         saver = Saver(save_dir, sess)
@@ -295,14 +314,12 @@ def run_job(args, save_dir=None):
                 print("    amount of random data: ", numData_train_rand)
                 print("    amount of onPol data: ", numData_train_onPol)
 
-            """Why?!"""
             ### copy train_onPol until it's big enough
             if len(inputs_onPol) > 0:
                 while inputs_onPol.shape[0] < inputs.shape[0]:
                     inputs_onPol = np.concatenate([inputs_onPol, inputs_onPol])
                     outputs_onPol = np.concatenate([outputs_onPol, outputs_onPol])
 
-            """Why?!"""
             ### copy val_onPol until it's big enough
             while inputs_val_onPol.shape[0] < args.batchsize:
                 inputs_val_onPol = np.concatenate(
@@ -334,24 +351,28 @@ def run_job(args, save_dir=None):
             else:
                 nEpoch_use = args.nEpoch
 
-            # restore or train model.
+            """
+            #############################################################
+            ################## restore or train model. ##################
+            #############################################################
+            """ 
             # TODO: add disc to loading mode.
             if args.always_use_savedModel:
                 raise NotImplementedError
             else:
-                # Train model 
-                ## Training on random and on policy data. 
+                # Train model
+                # Training on random & on policy data. 
                 training_loss, training_lists_to_save = dyn_models.train(
-                    inputs,
-                    outputs,
-                    inputs_onPol,
-                    outputs_onPol,
-                    nEpoch_use,
+                    data_inputs_rand=inputs,
+                    data_outputs_rand=outputs,
+                    data_inputs_onPol=inputs_onPol,
+                    data_outputs_onPol=outputs_onPol,
+                    nEpoch=nEpoch_use,
                     inputs_val=inputs_val,
                     outputs_val=outputs_val,
                     inputs_val_onPol=inputs_val_onPol,
                     outputs_val_onPol=outputs_val_onPol,
-                    wandb=wandb if args.wandb else None
+                    wandb=wandb if args.wandb else None,
                 )
 
             # saving rollout info
@@ -383,15 +404,24 @@ def run_job(args, save_dir=None):
                 )
 
                 rollout_info = mpc_rollout.perform_rollout(
-                    starting_state,
-                    starting_observation,
+                    starting_fullenvstate=starting_state,
+                    starting_observation=starting_observation,
                     controller_type=args.controller_type,
                     take_exploratory_actions=False,
+                    use_disc=False
                 )
 
+                predictions = model_errors = [np.linalg.norm(rollout_info['predicted_next_state'][t,:], ord=2) for t in range(rollout_info['observations'].shape[0] - 1)]
+                model_errors = [np.linalg.norm((rollout_info['observations'][t + 1,:] - rollout_info['observations'][t,:]) - rollout_info['predicted_next_state'][t,:], ord=2) for t in range(rollout_info['observations'].shape[0] - 1)]
+                model_errors_non_diff = [np.linalg.norm(rollout_info['observations'][t + 1,:] - rollout_info['predicted_next_state'][t,:], ord=2) for t in range(rollout_info['observations'].shape[0] - 1)]
+                print("model_errors", np.mean(model_errors))
+                print("model_errors_non_diff", np.mean(model_errors_non_diff))
+                print("predicton magnitude", np.mean(predictions))
                 if args.wandb:
-                    wandb.log({"model_only/rollout_reward": rollout_info['rollout_rewardTotal']})
-                
+                    wandb.log({
+                            "model_only/rollout_reward": rollout_info['rollout_rewardTotal'],
+                            "model_only/average_model_error": float(np.mean(model_errors)),
+                        })
 
                 """
                 NOTE: can sometimes set take_exploratory_actions=True
@@ -456,13 +486,65 @@ def run_job(args, save_dir=None):
                     rollout_info["starting_state"]
                 )
 
-                rollouts_rand.append(rollout)
+                rollouts_rand.append(rollout_info)
 
             # convert (rollouts --> dataset)
-            dataset_rand_new = data_processor.convertRolloutsToDatasets(rollouts_rand)
+            # dataset_disc_rand_new = data_processor.convertRolloutsToDatasets(rollouts_rand)
 
             # concat this dataset with the existing dataset_trainRand
-            dataset_trainRand = concat_datasets(dataset_trainRand, dataset_rand_new)
+            # dataset_disc_trainRand = concat_datasets(dataset_disc_trainRand, dataset_disc_rand_new)
+
+
+            
+            """Create disc random data"""
+            disc_rand_real_transitions_train = []
+            disc_rand_real_transitions_val = []
+            disc_rand_pred_transitions_train = []
+            disc_rand_pred_transitions_val = []
+
+            num_mpc_rollouts = len(rollouts_rand)
+            rollouts_train = []
+            rollouts_val = []
+
+            for i in range(num_mpc_rollouts):
+                for t in range(rollouts_rand[i]['actions'].shape[0]):
+                    # model predicts diffs so need to calcuate it
+                    real_transition = Transition(
+                        state = rollouts_rand[i]['observations'][t,:], 
+                        action = rollouts_rand[i]['actions'][t, :],
+                        difference = rollouts_rand[i]['observations'][t + 1,:] - rollouts_rand[i]['observations'][t,:]
+                    )
+
+                    pred_transition = Transition(
+                        state = rollouts_rand[i]['observations'][t,:], 
+                        action = rollouts_rand[i]['actions'][t, :], 
+                        difference = rollouts_rand[i]['predicted_next_state'][t,:]
+                    )
+                    
+                    if i < int(num_mpc_rollouts * 0.9):
+                        disc_rand_real_transitions_train.append(real_transition)
+                        disc_rand_pred_transitions_train.append(pred_transition)
+                    else:
+                        disc_rand_real_transitions_val.append(real_transition)
+                        disc_rand_pred_transitions_val.append(pred_transition)
+
+            # # aggregate into training data
+            # if counter == 0:
+            #     rollouts_valOnPol = []
+            # rollouts_trainOnPol = rollouts_trainOnPol + rollouts_train
+            # rollouts_valOnPol = rollouts_valOnPol + rollouts_val
+
+            # aggregate into disc training data
+            if counter == 0:
+                disc_valOnPol_real = []
+                disc_valOnPol_pred = []
+            
+            disc_rand_trainOnPol_real = disc_rand_trainOnPol_real + disc_rand_real_transitions_train
+            disc_rand_trainOnPol_pred = disc_rand_trainOnPol_pred + disc_rand_pred_transitions_train
+            disc_rand_valOnPol_real = disc_rand_valOnPol_real + disc_rand_real_transitions_val
+            disc_rand_valOnPol_pred = disc_rand_valOnPol_pred + disc_rand_pred_transitions_val
+
+
 
             #############################################################
             ########### aggregate MPC rollouts into train/val ###########
@@ -484,12 +566,15 @@ def run_job(args, save_dir=None):
                     rollouts_train.append(rollout)
                 else:
                     rollouts_val.append(rollout)
-
+            
+            
             """Create disc data"""
             disc_real_transitions_train = []
             disc_real_transitions_val = []
             disc_pred_transitions_train = []
             disc_pred_transitions_val = []
+
+            
 
             for i in range(num_mpc_rollouts):
                 for t in range(rollouts_info[i]['actions'].shape[0]):
@@ -505,6 +590,8 @@ def run_job(args, save_dir=None):
                         action = rollouts_info[i]['actions'][t, :], 
                         difference = rollouts_info[i]['predicted_next_state'][t,:]
                     )
+
+                    
                     
                     if i < int(num_mpc_rollouts * 0.9):
                         disc_real_transitions_train.append(real_transition)
@@ -513,11 +600,12 @@ def run_job(args, save_dir=None):
                         disc_real_transitions_val.append(real_transition)
                         disc_pred_transitions_val.append(pred_transition)
 
-            # aggregate into training data
-            if counter == 0:
-                rollouts_valOnPol = []
-            rollouts_trainOnPol = rollouts_trainOnPol + rollouts_train
-            rollouts_valOnPol = rollouts_valOnPol + rollouts_val
+            # # aggregate into training data
+            # if counter == 0:
+            #     rollouts_valOnPol = []
+
+            # rollouts_trainOnPol = rollouts_trainOnPol + rollouts_train
+            # rollouts_valOnPol = rollouts_valOnPol + rollouts_val
 
             # aggregate into disc training data
             if counter == 0:
@@ -563,7 +651,6 @@ def run_job(args, save_dir=None):
             saver_data.rollouts_scoresPerIter = scores_perIter
             saver_data.rollouts_info = rollouts_info
             saver.save_rollout_info(saver_data)
-            counter = counter + 1
 
             ###                                                 ###
             #######################################################
@@ -591,6 +678,11 @@ def run_job(args, save_dir=None):
             # dataset_trainOnPol = disc_data_processor.convertRolloutsToDatasets(rollouts_trainOnPol)
             # dataset_valOnPol = disc_data_processor.convertRolloutsToDatasets(rollouts_valOnPol)
 
+            disc_dataset_trainOnPol_rand_real = disc_data_processor.convertTransitionsToDatasets(disc_rand_trainOnPol_real)
+            disc_dataset_trainOnPol_rand_pred = disc_data_processor.convertTransitionsToDatasets(disc_rand_trainOnPol_pred)
+            disc_dataset_valOnPol_rand_real = disc_data_processor.convertTransitionsToDatasets(disc_rand_valOnPol_real)
+            disc_dataset_valOnPol_rand_pred = disc_data_processor.convertTransitionsToDatasets(disc_rand_valOnPol_pred)
+
             disc_dataset_trainOnPol_real = disc_data_processor.convertTransitionsToDatasets(disc_trainOnPol_real)
             disc_dataset_trainOnPol_pred = disc_data_processor.convertTransitionsToDatasets(disc_trainOnPol_pred)
             disc_dataset_valOnPol_real = disc_data_processor.convertTransitionsToDatasets(disc_valOnPol_real)
@@ -601,26 +693,32 @@ def run_job(args, save_dir=None):
             numData_train_onPol = get_num_data(rollouts_trainOnPol)
 
             # calculate mean/std of all data
-            # TODO: fix rand
+            # TODO: are the inputs what they should be?
             disc_data_processor.update_stats(
-                discriminator, disc_dataset_trainOnPol_real, disc_dataset_trainOnPol_pred
+                discriminator, disc_dataset_trainOnPol_rand_real, disc_dataset_trainOnPol_real
             )
 
-            # preprocess datasets to mean0/std1 + clip actions
-            # preprocessed_data_trainRand = disc_data_processor.preprocess_data(dataset_trainRand)
-            # preprocessed_data_valRand = disc_data_processor.preprocess_data(dataset_valRand)
+            # preprocess datasets to mean0/std1 + clip actions #
+
+            # Random data
+            preprocessed_disc_rand_data_trainOnPol_real = disc_data_processor.preprocess_data(disc_dataset_trainOnPol_rand_real)
+            preprocessed_disc_rand_data_trainOnPol_pred = disc_data_processor.preprocess_data(disc_dataset_trainOnPol_rand_pred)
+            preprocessed_disc_rand_data_valOnPol_real = disc_data_processor.preprocess_data(disc_dataset_valOnPol_rand_real)
+            preprocessed_disc_rand_data_valOnPol_pred = disc_data_processor.preprocess_data(disc_dataset_valOnPol_rand_pred)
+            # On policy data
             preprocessed_disc_data_trainOnPol_real = disc_data_processor.preprocess_data(disc_dataset_trainOnPol_real)
             preprocessed_disc_data_trainOnPol_pred = disc_data_processor.preprocess_data(disc_dataset_trainOnPol_pred)
-            
             preprocessed_disc_data_valOnPol_real = disc_data_processor.preprocess_data(disc_dataset_valOnPol_real)
             preprocessed_disc_data_valOnPol_pred = disc_data_processor.preprocess_data(disc_dataset_valOnPol_pred)
             
-            # preprocessed_data_valOnPol = disc_data_processor.preprocess_data(dataset_valOnPol)
-
             # convert datasets (x,y,z) --> training sets ((state,action), (next_state))
+            # TODO: REMOVE
             # inputs, outputs = disc_data_processor.xyz_to_inpOutp(preprocessed_data_trainRand)
             # inputs_val, outputs_val = disc_data_processor.xyz_to_inpOutp(preprocessed_data_valRand)
-            
+            # Random data
+            disc_inputs_rand, disc_outputs_rand = disc_data_processor.xyz_to_disc_io(preprocessed_disc_rand_data_trainOnPol_real, preprocessed_disc_rand_data_trainOnPol_pred)
+            disc_inputs_val_rand, disc_outputs_val_rand = disc_data_processor.xyz_to_disc_io(preprocessed_disc_rand_data_valOnPol_real, preprocessed_disc_rand_data_valOnPol_pred)
+            # On policy data
             disc_inputs_onPol, disc_outputs_onPol = disc_data_processor.xyz_to_disc_io(preprocessed_disc_data_trainOnPol_real, preprocessed_disc_data_trainOnPol_pred)
             disc_inputs_val_onPol, disc_outputs_val_onPol = disc_data_processor.xyz_to_disc_io(preprocessed_disc_data_valOnPol_real, preprocessed_disc_data_valOnPol_pred)
 
@@ -639,7 +737,7 @@ def run_job(args, save_dir=None):
             """Why?!"""
             ### copy train_onPol until it's big enough
             if len(disc_inputs_onPol) > 0:
-                while disc_inputs_onPol.shape[0] < inputs.shape[0]:
+                while disc_inputs_onPol.shape[0] < disc_inputs_rand.shape[0]:
                     disc_inputs_onPol = np.concatenate([disc_inputs_onPol, disc_inputs_onPol])
                     disc_outputs_onPol = np.concatenate([disc_outputs_onPol, disc_outputs_onPol])
 
@@ -655,20 +753,20 @@ def run_job(args, save_dir=None):
 
             print(f"after: inputs_onPol.shape: {disc_inputs_onPol.shape}")
             
-            # restore model if doing continue_run otherwise re-initialize all vars (randomly) 
-            if args.warmstart_training:
-                if firstTime:
-                    if continue_run > 0:
-                        restore_path = (
-                            save_dir
-                            + "/models/model_aggIter"
-                            + str(continue_run - 1)
-                            + ".ckpt"
-                        )
-                        saver.tf_saver.restore(sess, restore_path)
-                        print("\n\nModel restored from ", restore_path, "\n\n")
-            else:
-                sess.run(tf.global_variables_initializer())
+            # # restore model if doing continue_run otherwise re-initialize all vars (randomly) 
+            # if args.warmstart_training:
+            #     if firstTime:
+            #         if continue_run > 0:
+            #             restore_path = (
+            #                 save_dir
+            #                 + "/models/model_aggIter"
+            #                 + str(continue_run - 1)
+            #                 + ".ckpt"
+            #             )
+            #             saver.tf_saver.restore(sess, restore_path)
+            #             print("\n\nModel restored from ", restore_path, "\n\n")
+            # else:
+            #     sess.run(tf.global_variables_initializer()) # this is causing a problem
 
             # number of training epochs
             if counter == 0:
@@ -676,49 +774,58 @@ def run_job(args, save_dir=None):
             else:
                 nEpoch_use = args.nEpoch
 
-            # restore or train model.
+            """
+            #############################################################
+            ############## restore or train discriminator. ##############
+            #############################################################
+            """
             if args.always_use_savedModel:
-                if continue_run > 0:
-                    restore_path = (
-                        save_dir
-                        + "/models/model_aggIter"
-                        + str(continue_run - 1)
-                        + ".ckpt"
-                    )
-                else:
-                    restore_path = save_dir + "/models/finalModel.ckpt"
+                raise NotImplementedError
+                # if continue_run > 0:
+                #     restore_path = (
+                #         save_dir
+                #         + "/models/model_aggIter"
+                #         + str(continue_run - 1)
+                #         + ".ckpt"
+                #     )
+                # else:
+                #     restore_path = save_dir + "/models/finalModel.ckpt"
 
-                saver.tf_saver.restore(sess, restore_path)
-                print("\n\nModel restored from ", restore_path, "\n\n")
+                # saver.tf_saver.restore(sess, restore_path)
+                # print("\n\nModel restored from ", restore_path, "\n\n")
 
-                # empty vars, for saving
-                training_loss = 0
-                training_lists_to_save = dict(
-                    training_loss_list=0,
-                    val_loss_list_rand=0,
-                    val_loss_list_onPol=0,
-                    val_loss_list_xaxis=0,
-                    rand_loss_list=0,
-                    onPol_loss_list=0,
-                )
+                # # empty vars, for saving
+                # training_loss = 0
+                # training_lists_to_save = dict(
+                #     training_loss_list=0,
+                #     val_loss_list_rand=0,
+                #     val_loss_list_onPol=0,
+                #     val_loss_list_xaxis=0,
+                #     rand_loss_list=0,
+                #     onPol_loss_list=0,
+                # )
             else:
                 # Train model on random and on policy data. 
                 """What is this expansion for?"""
+                disc_inputs_rand = np.expand_dims(disc_inputs_rand, axis = 1)
+                disc_outputs_rand = np.expand_dims(disc_outputs_rand, axis = 1)
+                disc_inputs_val_rand = np.expand_dims(disc_inputs_val_rand, axis = 1)
+                disc_outputs_val_rand = np.expand_dims(disc_outputs_val_rand, axis = 1)
+
                 disc_inputs_onPol = np.expand_dims(disc_inputs_onPol, axis = 1)
-                disc_outputs_onPol = np.expand_dims(disc_outputs_onPol, axis = 1)
-                
+                disc_outputs_onPol = np.expand_dims(disc_outputs_onPol, axis = 1) 
                 disc_inputs_val_onPol = np.expand_dims(disc_inputs_val_onPol, axis = 1)
                 disc_outputs_val_onPol = np.expand_dims(disc_outputs_val_onPol, axis = 1)
 
-                # TODO: handle random data inputs
+            #     # TODO: handle random data inputs
                 training_loss, training_lists_to_save = discriminator.train(
-                    inputs,
-                    outputs,
-                    disc_inputs_onPol,
-                    disc_outputs_onPol,
-                    nEpoch_use,
-                    inputs_val=inputs_val,
-                    outputs_val=outputs_val,
+                    data_inputs_rand=disc_inputs_rand,
+                    data_outputs_rand=disc_outputs_rand,
+                    data_inputs_onPol=disc_inputs_onPol,
+                    data_outputs_onPol=disc_outputs_onPol,
+                    nEpoch=nEpoch_use * 3,
+                    inputs_val=disc_inputs_val_rand,
+                    outputs_val=disc_outputs_val_rand,
                     inputs_val_onPol=disc_inputs_val_onPol,
                     outputs_val_onPol=disc_outputs_val_onPol,
                     wandb=wandb if args.wandb else None
@@ -753,15 +860,16 @@ def run_job(args, save_dir=None):
                 )
 
                 rollout_info = mpc_rollout.perform_rollout(
-                    starting_state,
-                    starting_observation,
+                    starting_fullenvstate=starting_state,
+                    starting_observation=starting_observation,
                     controller_type=args.controller_type,
                     take_exploratory_actions=False,
                     use_disc=True
                 )
 
                 if args.wandb:
-                    wandb.log({"model_disc/rollout_reward": rollout_info['rollout_rewardTotal']})
+                    wandb.log(
+                        {"model_disc/rollout_reward": rollout_info['rollout_rewardTotal']})
 
                 """
                 NOTE: can sometimes set take_exploratory_actions=True
@@ -827,8 +935,6 @@ def run_job(args, save_dir=None):
 
                 rollouts_rand.append(rollout)
 
-
-
             # convert (rollouts --> dataset)
             dataset_rand_new = disc_data_processor.convertRolloutsToDatasets(rollouts_rand)
 
@@ -859,6 +965,7 @@ def run_job(args, save_dir=None):
             # aggregate into training data
             if counter == 0:
                 rollouts_valOnPol = []
+
             rollouts_trainOnPol = rollouts_trainOnPol + rollouts_train
             rollouts_valOnPol = rollouts_valOnPol + rollouts_val
 
@@ -884,7 +991,6 @@ def run_job(args, save_dir=None):
             saver.save_model()
             saver.save_training_info(saver_data)
             
-
             #############################################################
             ###### save everything about this iter of MPC rollouts ######
             #############################################################

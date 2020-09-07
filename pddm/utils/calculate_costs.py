@@ -156,7 +156,6 @@ def calculate_costs(
         # new_new_costs = np.reshape(costs, [-1, N]).T
         # assert np.allclose(new_new_costs, np.array(new_costs)), f"new_new_costs = {new_new_costs} != {new_costs} = new_costs"
         
-        
         rewards = - np.reshape(stepwise_costs, [horizon, -1, N])
         # TODO: remove assertion
         assert np.allclose(-np.sum(rewards, axis = 0).T, np.array(new_costs))
