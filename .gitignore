@@ -5,3 +5,6 @@ __pycache__/*
 *egg-info
 pddm/output*
 pddm/delete*
+env/
+._setup.py
+*wandb*

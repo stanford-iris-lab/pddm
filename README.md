@@ -1,8 +1,24 @@
-# PDDM
+# Importance weighting for PDDM
+
+# TODO: 
+- [x] fix disc training bug
+- [x] train model on [model + disc] data 
+- [x] plan with disc
+- [x] random data collection 
+- [x] train disc on random data
+- [x] ensembles
+- [ ] stochastic forward models
+- [x] add wandb
+- [ ] video rendering
+- [ ] load runs (not important for now)
+- [ ] discrimnator metrics (auc, precision, recall).
+- [ ] check if normalization is done right. 
+
+Based on [[Project Page]](https://bit.ly/pddm2019) [[Paper]](https://arxiv.org/abs/1909.11652).
 
 <img src="https://github.com/google-research/pddm/blob/master/pddm/gifs/dclaw_gif.gif" height="200" /> <img src="https://github.com/google-research/pddm/blob/master/pddm/gifs/cube_gif.gif" height="200" /> <img src="https://github.com/google-research/pddm/blob/master/pddm/gifs/handwriting_gif.gif" height="200" /> <img src="https://github.com/google-research/pddm/blob/master/pddm/gifs/baoding_gif.gif" height="200" />
 
-[[Project Page]](https://bit.ly/pddm2019) [[Paper]](https://arxiv.org/abs/1909.11652)
+
 
 **Deep Dynamics Models for Learning Dexterous Manipulation**<br/>
 [Anusha Nagabandi](https://people.eecs.berkeley.edu/~nagaban2/), Kurt Konolige, Sergey Levine, [Vikash Kumar](https://vikashplus.github.io/).
@@ -10,10 +26,10 @@
 Please note that this is research code, and as such, is still under construction. This code implements the model-based RL algorithm presented in PDDM. Please contact Anusha Nagabandi for questions or concerns. <br/><br/>
 
 **Contents of this README:**
-- [A. Getting Started](#a-getting-started)
-- [B. Quick Overview](b-quick-overview)
-- [C. Train and visualize some tests](#c-train-and-visualize-some-tests)
-- [D. Run experiments](#d-run-experiments)
+- [Getting Started](#a-getting-started)
+- [Quick Overview](b-quick-overview)
+- [Run experiments](#d-run-experiments)
+<!-- - [Train and visualize some tests](#c-train-and-visualize-some-tests) -->
 <br/><br/>
 
 
@@ -58,7 +74,7 @@ d) The MJPL before the python visualization commands below are needed only if wo
 
 
 
-## B. Quick Overview ##
+## Quick Overview ##
 
 The overall procedure that is implemented in this code is the iterative process of learning a dynamics model and then running an MPC controller which uses that model to perform action selection. The code starts by initializing a dataset of randomly collected rollouts (i.e., collected with a random policy), and then iteratively (a) training a model on the dataset and (b) collecting rollouts (using MPC with that model) and aggregating them into the dataset.
 
@@ -69,7 +85,7 @@ To see available parameters to set, see the files in the configs folder, as well
 
 
 
-## C. Train and visualize some tests ##
+<!-- ## C. Train and visualize some tests ##
 
 Cheetah:
 ```bash
@@ -110,20 +126,22 @@ Note that this will work well but also take a while to run, because it's using g
 python train.py --config ../config/test_baoding_gt.txt --output_dir ../output --use_gpu
 MJPL python visualize_iteration.py --job_path ../output/baoding_gt --iter_num 0
 ```
-<br/><br/>
+<br/><br/> -->
 
 
-## D. Run experiments ##
+## Run experiments ##
 
 **Train:**
 
+Importance Weighting 
 ```bash
-python train.py --config ../config/dclaw_turn.txt --output_dir ../output --use_gpu
-python train.py --config ../config/baoding.txt --output_dir ../output --use_gpu
-python train.py --config ../config/cube.txt --output_dir ../output --use_gpu
+python train_iw.py --config ../config/cheetah.txt --output_dir ../output --use_gpu
+python train_iw.py --config ../config/dclaw_turn.txt --output_dir ../output --use_gpu
+python train_iw.py --config ../config/baoding.txt --output_dir ../output --use_gpu
+python train_iw.py --config ../config/cube.txt --output_dir ../output --use_gpu
 ```
-
-**Evaluate a pre-trained model:**
+use `--wandb` for logging results. To run the experiments without importance weighting, run `train.py` instead. 
+<!-- **Evaluate a pre-trained model:**
 
 ```bash
 python eval_iteration.py --job_path ../output/dclaw_turn --iter_num 0 --num_eval_rollouts 1 --eval_run_length 40
@@ -142,4 +160,4 @@ Plot rewards (or scores) of multiple runs on the same plot. Note that custom lab
 ```bash
 python compare_results.py -j ../output/runA ../output/runB -l 'mycustomlabel runA' -l 'mycustomlabel runB' --plot_rew
 python compare_results.py -j ../output/runA ../output/runB -l 'mycustomlabel runA' -l 'mycustomlabel runB'
-```
+``` -->

@@ -1,25 +1,13 @@
-# Copyright 2019 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import gym
 import numpy as np
+
 
 class EnvSpec(object):
     def __init__(self, obs_dim, act_dim, horizon):
         self.observation_dim = obs_dim
         self.action_dim = act_dim
         self.horizon = horizon
+
 
 class GymEnv(object):
     def __init__(self, env_name):
@@ -68,21 +56,26 @@ class GymEnv(object):
     def render(self):
         self.env.render()
 
-    def visualize_policy(self, policy, horizon=1000, num_episodes=1, mode='exploration'):
+    def visualize_policy(
+        self, policy, horizon=1000, num_episodes=1, mode="exploration"
+    ):
         self.env.env.visualize_policy(policy, horizon, num_episodes, mode)
 
-    def evaluate_policy(self, policy,
-                        num_episodes=5,
-                        horizon=None,
-                        gamma=1,
-                        visual=False,
-                        percentile=[],
-                        get_full_dist=False,
-                        mean_action=False,
-                        init_state=None,
-                        terminate_at_done=True,
-                        save_video_location=None,
-                        seed=None):
+    def evaluate_policy(
+        self,
+        policy,
+        num_episodes=5,
+        horizon=None,
+        gamma=1,
+        visual=False,
+        percentile=[],
+        get_full_dist=False,
+        mean_action=False,
+        init_state=None,
+        terminate_at_done=True,
+        save_video_location=None,
+        seed=None,
+    ):
 
         if seed is not None:
             self.env._seed(seed)
@@ -107,7 +100,7 @@ class GymEnv(object):
                 if visual == True:
                     self.render()
                 if mean_action:
-                    a = policy.get_action(o)[1]['mean']
+                    a = policy.get_action(o)[1]["mean"]
                 else:
                     a = policy.get_action(o)[0]
                 o, r, done, _ = self.step(a)

@@ -1,41 +1,30 @@
-# Copyright 2019 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import numpy as np
 import numpy.random as npr
 import time
 
-#my imports
+# my imports
 from pddm.policies.random_shooting import RandomShooting
 from pddm.policies.cem import CEM
 from pddm.policies.mppi import MPPI
 
 
 class MPCRollout:
+    def __init__(
+        self,
+        env,
+        dyn_models,
+        rand_policy,
+        execute_sideRollouts,
+        plot_sideRollouts,
+        params,
+        discriminator=False, 
+        evaluating=False,
+    ):
 
-    def __init__(self,
-                 env,
-                 dyn_models,
-                 rand_policy,
-                 execute_sideRollouts,
-                 plot_sideRollouts,
-                 params,
-                 evaluating=False):
-
-        #init vars
+        # init vars
         self.env = env
         self.dyn_models = dyn_models
+        self.discriminator = discriminator
         self.print_minimal = params.print_minimal
         self.use_ground_truth_dynamics = params.use_ground_truth_dynamics
         self.evaluating = evaluating
@@ -49,24 +38,49 @@ class MPCRollout:
 
         self.reward_func = env.unwrapped_env.get_reward
 
-        #init controllers
+        # init controllers
         self.controller_randshooting = RandomShooting(
-                                self.env, self.dyn_models, self.reward_func, rand_policy,
-                                self.use_ground_truth_dynamics,
-                                execute_sideRollouts, plot_sideRollouts, params)
-        self.controller_cem = CEM(self.env, self.dyn_models, self.reward_func, rand_policy,
-                                  self.use_ground_truth_dynamics,
-                                  execute_sideRollouts, plot_sideRollouts, params)
-        self.controller_mppi = MPPI(self.env, self.dyn_models, self.reward_func, rand_policy,
-                                    self.use_ground_truth_dynamics,
-                                    execute_sideRollouts, plot_sideRollouts, params)
+            self.env,
+            self.dyn_models,
+            self.reward_func,
+            rand_policy,
+            self.use_ground_truth_dynamics,
+            execute_sideRollouts,
+            plot_sideRollouts,
+            params,
+        )
+        self.controller_cem = CEM(
+            self.env,
+            self.dyn_models,
+            self.reward_func,
+            rand_policy,
+            self.use_ground_truth_dynamics,
+            execute_sideRollouts,
+            plot_sideRollouts,
+            params,
+        )
+        self.controller_mppi = MPPI(
+            self.env,
+            self.dyn_models,
+            self.reward_func,
+            rand_policy,
+            self.use_ground_truth_dynamics,
+            execute_sideRollouts,
+            plot_sideRollouts,
+            params,
+            discriminator=self.discriminator
+        )
 
-    def perform_rollout(self,
-                        starting_fullenvstate,
-                        starting_observation,
-                        controller_type,
-                        take_exploratory_actions=False,
-                        isRandom=False):
+    def perform_rollout(
+        self,
+        starting_fullenvstate,
+        starting_observation,
+        controller_type,
+        take_exploratory_actions=False,
+        isRandom=False,
+        use_disc=False,
+        random_sampling_params=None
+    ):
         """
         Args:
             starting_fullenvstate: full state of the mujoco env (enough to allow resetting to it)
@@ -86,7 +100,7 @@ class MPCRollout:
 
         rollout_start = time.time()
 
-        #if evaluating, default to no action noise
+        # if evaluating, default to no action noise
         if self.evaluating:
             self.noise_actions = False
 
@@ -94,20 +108,23 @@ class MPCRollout:
         #### select controller type
         #######################################
 
-        if controller_type=='rand':
+        if controller_type == "rand":
+            raise NotImplementedError
             get_action = self.controller_randshooting.get_action
-        elif controller_type=='cem':
+        elif controller_type == "cem":
+            raise NotImplementedError
             get_action = self.controller_cem.get_action
-        elif controller_type=='mppi':
+        elif controller_type == "mppi":
             get_action = self.controller_mppi.get_action
 
         #######################################
         #### lists for saving
         #######################################
 
-        #lists for saving info
+        # lists for saving info
         traj_taken = []
         traj_taken_K = []
+        traj_predicted = []
         actions_taken = []
         actions_taken_K = []
         rewards = []
@@ -129,9 +146,9 @@ class MPCRollout:
 
         zero_ac = np.zeros((self.env.action_dim,))
         curr_state = np.copy(starting_observation)
-        curr_state_K = [curr_state]  #not K yet, but will be
+        curr_state_K = [curr_state]  # not K yet, but will be
 
-        #take (K-1) steps of action 0
+        # take (K-1) steps of action 0
         for z in range(self.K - 1):
 
             # take step of action 0
@@ -141,9 +158,9 @@ class MPCRollout:
             actions_taken.append(zero_ac)
             curr_state_K.append(curr_state)
 
-            #save info
+            # save info
             rewards.append(rew)
-            scores.append(env_info['score'])
+            scores.append(env_info["score"])
             env_infos.append(env_info)
             total_reward_for_episode += rew
 
@@ -151,7 +168,7 @@ class MPCRollout:
             # but traj_taken_K/traj_taken are not
             # because curr_state_K is not of size K yet
 
-        #curr_state_K has K entries now
+        # curr_state_K has K entries now
         traj_taken.append(curr_state)
         traj_taken_K.append(curr_state_K)
 
@@ -160,7 +177,7 @@ class MPCRollout:
         #######################################
 
         done = False
-        while not(done or step>=self.rollout_length):
+        while not (done or step >= self.rollout_length):
 
             if self.use_ground_truth_dynamics:
                 print(step)
@@ -169,21 +186,46 @@ class MPCRollout:
             #### get optimal action
             ########################
 
-            #curr_state_K : past K states
-            #actions_taken : past all actions (taken so far in this rollout)
+            # curr_state_K : past K states
+            # actions_taken : past all actions (taken so far in this rollout)
             if isRandom:
-                best_action, _ = self.rand_policy.get_action(None, None)
+                assert random_sampling_params is not None, "Provide random sampling params."
+                best_action, _ = self.rand_policy.get_action(None, None, random_sampling_params)
             else:
+                # predicted_states_list.shape: [ensemble_size, horizon+1, N, state_size]
                 best_action, predicted_states_list = get_action(
-                    step, curr_state_K, actions_taken, starting_fullenvstate,
-                    self.evaluating, take_exploratory_actions)
+                    step,
+                    curr_state_K,
+                    actions_taken,
+                    starting_fullenvstate,
+                    self.evaluating,
+                    take_exploratory_actions,
+                    use_disc=use_disc
+                )
 
-            #noise the action, as needed
+            #########################################################
+            ########## GET PREDICTION FOR OPTIMAL ELECTION ##########
+            #####                                               #####
+            reshaped_selected_action = best_action[None, None, None]
+            resulting_states_list = self.dyn_models.do_forward_sim(
+                    [curr_state_K, 0], np.copy(reshaped_selected_action)
+                )
+            resulting_states_list = np.swapaxes(
+                    resulting_states_list, 0, 1
+                )  
+            # resulting_states_list.shape: [ensemble_size, horizon+1, N, state_size]
+            predicted_next_state = np.array(resulting_states_list)[:, -1,-1,:]
+            mean_predicted_next_state = np.mean(predicted_next_state, axis=0)
+            
+            #####                                               #####
+            ##########                                     ##########
+            #########################################################
+
+            # noise the action, as needed
             action_to_take = np.copy(best_action)
             clean_action = np.copy(action_to_take)
             if self.noise_actions:
-                noise = self.noise_amount * npr.normal(
-                    size=action_to_take.shape)
+                noise = self.noise_amount * npr.normal(size=action_to_take.shape)
                 action_to_take = action_to_take + noise
                 action_to_take = np.clip(action_to_take, -1, 1)
             if self.document_noised_actions:
@@ -194,70 +236,77 @@ class MPCRollout:
             ########################
             #### execute the action
             ########################
-            next_state, rew, done, env_info = self.env.step(action_to_take)
 
+            # action.shape (9,)
+            # state.shape: (21,)
+            # predicted_state_list.shape: (3, 8, model_sampling_rate, state_shape)
+
+            next_state, rew, done, env_info = self.env.step(action_to_take)
+           
             #################################################
             #### get predicted next_state
             ########## use it to calculate model prediction error (mpe)
             #################################################
 
-            #get updated mean/std from the dynamics model
+            # get updated mean/std from the dynamics model
             curr_mean_x = self.dyn_models.normalization_data.mean_x
             curr_std_x = self.dyn_models.normalization_data.std_x
             next_state_preprocessed = (next_state - curr_mean_x) / curr_std_x
 
-            #the most recent (K-1) acs
-            acs_Kminus1 = np.array(actions_taken[-(self.K - 1):])  #[K-1, acDim]
+            # the most recent (K-1) acs
+            acs_Kminus1 = np.array(actions_taken[-(self.K - 1) :])  # [K-1, acDim]
 
-            #create (past k) acs by combining (acs_Kminus1) with action
-            if self.K==1:
+            # create (past k) acs by combining (acs_Kminus1) with action
+            if self.K == 1:
                 acs_K = np.expand_dims(action_to_document, 0)
             else:
-                acs_K = np.append(acs_Kminus1,
-                                  np.expand_dims(action_to_document, 0),
-                                  0)  #[K, acDim]
+                acs_K = np.append(
+                    acs_Kminus1, np.expand_dims(action_to_document, 0), 0
+                )  # [K, acDim]
 
-            #Look at prediction from the 1st model of the ensemble
+            # Look at prediction from the 1st model of the ensemble
             predicted_next_state = self.dyn_models.do_forward_sim_singleModel(
-                [curr_state_K], [acs_K])
+                [curr_state_K], [acs_K]
+            )
             predicted_next_state_preprocessed = (
-                predicted_next_state - curr_mean_x) / curr_std_x
+                predicted_next_state - curr_mean_x
+            ) / curr_std_x
             mpe_1step = np.mean(
-                np.square(predicted_next_state_preprocessed -
-                          next_state_preprocessed))
+                np.square(predicted_next_state_preprocessed - next_state_preprocessed)
+            )
             list_mpe_1step.append(mpe_1step)
 
             ################################
             #### save things + check if done
             ################################
 
-            #save things
+            # save things
             rewards.append(rew)
-            scores.append(env_info['score'])
+            scores.append(env_info["score"])
             env_infos.append(env_info)
             actions_taken.append(action_to_document)
             total_reward_for_episode += rew
 
-            #returned by taking a step in the env
+
+            # returned by taking a step in the env
             curr_state = np.copy(next_state)
 
-            #remove current oldest element of K list (0th entry of 0th axis)
+            # remove current oldest element of K list (0th entry of 0th axis)
             curr_state_K = np.delete(curr_state_K, 0, 0)
-            #add this new state to end of K list
-            curr_state_K = np.append(curr_state_K, np.expand_dims(
-                curr_state, 0), 0)
+            # add this new state to end of K list
+            curr_state_K = np.append(curr_state_K, np.expand_dims(curr_state, 0), 0)
 
-            #save
+            # save
             traj_taken.append(curr_state)
             traj_taken_K.append(curr_state_K)
+            traj_predicted.append(mean_predicted_next_state)
             actions_taken_K.append(acs_K)
 
             if not self.print_minimal:
-                if (step % 100 == 0):
-                    print("done step ", step, ", rew: ",
-                          total_reward_for_episode)
+                if step % 100 == 0:
+                    print("done step ", step, ", rew: ", total_reward_for_episode)
 
-            #update
+            # update
             step += 1
 
         ##########################
@@ -272,21 +321,22 @@ class MPCRollout:
             starting_state=starting_fullenvstate,
             observations=np.array(traj_taken),
             actions=np.array(actions_taken),
-
             rollout_rewardsPerStep=np.array(rewards),
             rollout_rewardTotal=total_reward_for_episode,
-
             rollout_scoresPerStep=np.array(scores),
             rollout_meanScore=np.mean(scores),
             rollout_meanFinalScore=np.mean(scores[-5:]),
-
             mpe_1step=list_mpe_1step,
             observations_K=traj_taken_K,
             actions_K=actions_taken_K,
             env_infos=env_infos,
             dt_from_xml=self.dt_from_xml,
+            # Added by behzad
+            predicted_next_state=np.array(traj_predicted),
         )
 
         if not self.print_minimal:
-            print("Time for 1 rollout: {:0.2f} s\n\n".format(time.time() - rollout_start))
+            print(
+                "Time for 1 rollout: {:0.2f} s\n\n".format(time.time() - rollout_start)
+            )
         return rollout_info

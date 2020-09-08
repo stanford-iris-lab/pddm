@@ -16,24 +16,32 @@
 import tensorflow as tf
 
 
-def feedforward_network(inputStates, inputSize, outputSize, num_fc_layers,
-                        depth_fc_layers, tf_datatype, scope):
+def feedforward_network(
+    inputStates,
+    inputSize,
+    outputSize,
+    num_fc_layers,
+    depth_fc_layers,
+    tf_datatype,
+    scope,
+):
 
     with tf.variable_scope(str(scope)):
 
-        #concat K entries together [bs x K x sa] --> [bs x ksa]
+        # concat K entries together [bs x K x sa] --> [bs x ksa]
         inputState = tf.layers.flatten(inputStates)
 
-        #vars
+        # vars
         intermediate_size = depth_fc_layers
         reuse = False
         initializer = tf.contrib.layers.xavier_initializer(
-            uniform=False, seed=None, dtype=tf_datatype)
+            uniform=False, seed=None, dtype=tf_datatype
+        )
         fc = tf.contrib.layers.fully_connected
 
         # make hidden layers
         for i in range(num_fc_layers):
-            if i==0:
+            if i == 0:
                 fc_i = fc(
                     inputState,
                     num_outputs=intermediate_size,
@@ -41,7 +49,8 @@ def feedforward_network(inputStates, inputSize, outputSize, num_fc_layers,
                     weights_initializer=initializer,
                     biases_initializer=initializer,
                     reuse=reuse,
-                    trainable=True)
+                    trainable=True,
+                )
             else:
                 fc_i = fc(
                     h_i,
@@ -50,7 +59,8 @@ def feedforward_network(inputStates, inputSize, outputSize, num_fc_layers,
                     weights_initializer=initializer,
                     biases_initializer=initializer,
                     reuse=reuse,
-                    trainable=True)
+                    trainable=True,
+                )
             h_i = tf.nn.relu(fc_i)
 
         # make output layer
@@ -61,6 +71,7 @@ def feedforward_network(inputStates, inputSize, outputSize, num_fc_layers,
             weights_initializer=initializer,
             biases_initializer=initializer,
             reuse=reuse,
-            trainable=True)
+            trainable=True,
+        )
 
     return z

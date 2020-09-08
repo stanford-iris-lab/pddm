@@ -1,0 +1,4 @@
+Collecting MarkupSafe
+  Downloading https://files.pythonhosted.org/packages/6e/57/d40124076756c19ff2269678de7ae25a14ebbb3f6314eb5ce9477f191350/MarkupSafe-1.1.1-cp35-cp35m-manylinux1_x86_64.whl
+Installing collected packages: MarkupSafe
+Successfully installed MarkupSafe-1.1.1

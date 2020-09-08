@@ -1,18 +1,3 @@
-# Copyright 2019 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-
 """Base environment for MuJoCo-based environments."""
 
 import collections
@@ -29,14 +14,13 @@ from pddm.envs.simulation.sim_robot import MujocoSimRobot, RenderMode
 
 DEFAULT_RENDER_SIZE = 480
 
+
 class MujocoEnv(gym.Env):
     """Superclass for all MuJoCo environments."""
 
-    def __init__(self,
-                 model_path: str,
-                 frame_skip: int,
-                 camera_settings: Optional[Dict] = None,
-                 ):
+    def __init__(
+        self, model_path: str, frame_skip: int, camera_settings: Optional[Dict] = None,
+    ):
         """Initializes a new MuJoCo environment.
 
         Args:
@@ -49,19 +33,18 @@ class MujocoEnv(gym.Env):
         self._seed()
         if not os.path.isfile(model_path):
             raise IOError(
-                '[MujocoEnv]: Model path does not exist: {}'.format(model_path))
+                "[MujocoEnv]: Model path does not exist: {}".format(model_path)
+            )
         self.frame_skip = frame_skip
 
-        self.sim_robot = MujocoSimRobot(
-            model_path,
-            camera_settings=camera_settings)
+        self.sim_robot = MujocoSimRobot(model_path, camera_settings=camera_settings)
         self.sim = self.sim_robot.sim
         self.model = self.sim_robot.model
         self.data = self.sim_robot.data
 
         self.metadata = {
-            'render.modes': ['human', 'rgb_array', 'depth_array'],
-            'video.frames_per_second': int(np.round(1.0 / self.dt))
+            "render.modes": ["human", "rgb_array", "depth_array"],
+            "video.frames_per_second": int(np.round(1.0 / self.dt)),
         }
         self.mujoco_render_frames = False
 
@@ -77,23 +60,36 @@ class MujocoEnv(gym.Env):
         # Define the action and observation spaces.
         # HACK: MJRL is still using gym 0.9.x so we can't provide a dtype.
         try:
-            self.action_space = spaces.Box(
-                act_lower, act_upper, dtype=np.float32)
+            self.action_space = spaces.Box(act_lower, act_upper, dtype=np.float32)
             if isinstance(observation, collections.Mapping):
-                self.observation_space = spaces.Dict({
-                k: spaces.Box(-np.inf, np.inf, shape=v.shape, dtype=np.float32) for k, v in observation.items()})
+                self.observation_space = spaces.Dict(
+                    {
+                        k: spaces.Box(-np.inf, np.inf, shape=v.shape, dtype=np.float32)
+                        for k, v in observation.items()
+                    }
+                )
             else:
-                self.obs_dim = np.sum([o.size for o in observation]) if type(observation) is tuple else observation.size
+                self.obs_dim = (
+                    np.sum([o.size for o in observation])
+                    if type(observation) is tuple
+                    else observation.size
+                )
                 self.observation_space = spaces.Box(
-                -np.inf, np.inf, observation.shape, dtype=np.float32)
+                    -np.inf, np.inf, observation.shape, dtype=np.float32
+                )
 
         except TypeError:
             # Fallback case for gym 0.9.x
             self.action_space = spaces.Box(act_lower, act_upper)
-            assert not isinstance(observation, collections.Mapping), 'gym 0.9.x does not support dictionary observation.'
-            self.obs_dim = np.sum([o.size for o in observation]) if type(observation) is tuple else observation.size
-            self.observation_space = spaces.Box(
-                -np.inf, np.inf, observation.shape)
+            assert not isinstance(
+                observation, collections.Mapping
+            ), "gym 0.9.x does not support dictionary observation."
+            self.obs_dim = (
+                np.sum([o.size for o in observation])
+                if type(observation) is tuple
+                else observation.size
+            )
+            self.observation_space = spaces.Box(-np.inf, np.inf, observation.shape)
 
     def seed(self, seed=None):  # Compatibility with new gym
         return self._seed(seed)
@@ -148,11 +144,13 @@ class MujocoEnv(gym.Env):
             if self.mujoco_render_frames is True:
                 self.mj_render()
 
-    def render(self,
-               mode='human',
-               width=DEFAULT_RENDER_SIZE,
-               height=DEFAULT_RENDER_SIZE,
-               camera_id=-1):
+    def render(
+        self,
+        mode="human",
+        width=DEFAULT_RENDER_SIZE,
+        height=DEFAULT_RENDER_SIZE,
+        camera_id=-1,
+    ):
         """Renders the environment.
 
         Args:
@@ -167,20 +165,23 @@ class MujocoEnv(gym.Env):
             camera_id: The ID of the camera to use. By default, this is the free
                 camera. If specified, only affects offscreen rendering.
         """
-        if mode == 'human':
+        if mode == "human":
             self.sim_robot.renderer.render_to_window()
-        elif mode == 'rgb_array':
+        elif mode == "rgb_array":
             assert width and height
             return self.sim_robot.renderer.render_offscreen(
-                width, height, mode=RenderMode.RGB, camera_id=camera_id)
-        elif mode == 'depth_array':
+                width, height, mode=RenderMode.RGB, camera_id=camera_id
+            )
+        elif mode == "depth_array":
             assert width and height
             return self.sim_robot.renderer.render_offscreen(
-                width, height, mode=RenderMode.DEPTH, camera_id=camera_id)
-        elif mode == 'segmentation':
+                width, height, mode=RenderMode.DEPTH, camera_id=camera_id
+            )
+        elif mode == "segmentation":
             assert width and height
             return self.sim_robot.renderer.render_offscreen(
-                width, height, mode=RenderMode.SEGMENTATION, camera_id=camera_id)
+                width, height, mode=RenderMode.SEGMENTATION, camera_id=camera_id
+            )
         else:
             raise NotImplementedError(mode)
 
@@ -189,7 +190,7 @@ class MujocoEnv(gym.Env):
 
     def mj_render(self):
         """Backwards compatibility with MJRL."""
-        self.render(mode='human')
+        self.render(mode="human")
 
     def state_vector(self):
         state = self.sim.get_state()
@@ -197,13 +198,15 @@ class MujocoEnv(gym.Env):
 
     # -----------------------------
 
-    def visualize_policy(self,
-                         policy,
-                         horizon=1000,
-                         num_episodes=1,
-                         mode='exploration',
-                         env=None,
-                         render=True):
+    def visualize_policy(
+        self,
+        policy,
+        horizon=1000,
+        num_episodes=1,
+        mode="exploration",
+        env=None,
+        render=True,
+    ):
         if env is None:
             env = self
         self.mujoco_render_frames = render
@@ -218,16 +221,18 @@ class MujocoEnv(gym.Env):
             rew_for_ep = 0
             scores_for_ep = []
             while t < horizon and d is False:
-                a = policy.get_action(
-                    o)[0] if mode == 'exploration' else policy.get_action(
-                        o)[1]['evaluation']
+                a = (
+                    policy.get_action(o)[0]
+                    if mode == "exploration"
+                    else policy.get_action(o)[1]["evaluation"]
+                )
                 o, r, d, info = env.step(a)
-                if type(d)==np.float64:
-                    d = not(d==0)
+                if type(d) == np.float64:
+                    d = not (d == 0)
 
                 t = t + 1
                 rew_for_ep += r
-                scores_for_ep.append(info['score'])
+                scores_for_ep.append(info["score"])
 
             all_rewards.append(rew_for_ep)
             all_scores_mean.append(np.mean(scores_for_ep))
@@ -235,42 +240,50 @@ class MujocoEnv(gym.Env):
             print("rollout rew: ", rew_for_ep)
 
         print("\n\nREW: ", np.mean(all_rewards), ",", np.std(all_rewards))
-        print("SCO mean: ", np.mean(all_scores_mean), ",", np.std(all_scores_mean),"\n\n")
+        print(
+            "SCO mean: ", np.mean(all_scores_mean), ",", np.std(all_scores_mean), "\n\n"
+        )
         self.mujoco_render_frames = False
 
-    def visualize_policy_offscreen(self,
-                                   policy,
-                                   horizon=1000,
-                                   num_episodes=1,
-                                   frame_size=(640, 480),
-                                   mode='exploration',
-                                   save_loc='/tmp/',
-                                   filename='newvid',
-                                   camera_name=None):
+    def visualize_policy_offscreen(
+        self,
+        policy,
+        horizon=1000,
+        num_episodes=1,
+        frame_size=(640, 480),
+        mode="exploration",
+        save_loc="/tmp/",
+        filename="newvid",
+        camera_name=None,
+    ):
         import skvideo.io
+
         for ep in range(num_episodes):
-            print('Episode %d: rendering offline ' % ep, end='', flush=True)
+            print("Episode %d: rendering offline " % ep, end="", flush=True)
             o = self.reset()
             d = False
             t = 0
             arrs = []
             t0 = time.time()
             while t < horizon and d is False:
-                a = policy.get_action(
-                    o)[0] if mode == 'exploration' else policy.get_action(
-                        o)[1]['evaluation']
+                a = (
+                    policy.get_action(o)[0]
+                    if mode == "exploration"
+                    else policy.get_action(o)[1]["evaluation"]
+                )
                 o, r, d, _ = self.step(a)
                 t = t + 1
                 curr_frame = self.sim.render(
                     width=frame_size[0],
                     height=frame_size[1],
-                    mode='offscreen',
+                    mode="offscreen",
                     camera_name=camera_name,
-                    device_id=0)
+                    device_id=0,
+                )
                 arrs.append(curr_frame[::-1, :, :])
-                print(t, end=', ', flush=True)
-            file_name = save_loc + filename + str(ep) + '.mp4'
+                print(t, end=", ", flush=True)
+            file_name = save_loc + filename + str(ep) + ".mp4"
             skvideo.io.vwrite(file_name, np.asarray(arrs))
-            print('saved', file_name)
+            print("saved", file_name)
             t1 = time.time()
-            print('time taken = %f' % (t1 - t0))
+            print("time taken = %f" % (t1 - t0))

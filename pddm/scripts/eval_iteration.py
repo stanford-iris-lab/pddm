@@ -21,7 +21,7 @@ import argparse
 import tensorflow as tf
 import traceback
 
-#my imports
+# my imports
 from pddm.utils.helper_funcs import create_env
 from pddm.utils.helper_funcs import get_gpu_config
 from pddm.policies.policy_random import Policy_Random
@@ -31,6 +31,7 @@ from pddm.policies.mpc_rollout import MPCRollout
 from pddm.utils.data_structures import *
 import pddm.envs
 
+
 def run_eval(args, save_dir):
 
     ##########################
@@ -38,7 +39,7 @@ def run_eval(args, save_dir):
     ##########################
 
     ### read in params from saved config file
-    paramfile = open(save_dir + '/params.pkl', 'rb')
+    paramfile = open(save_dir + "/params.pkl", "rb")
     params = pickle.load(paramfile)
 
     ### can manually set some options here, for these eval runs (to override options from training)
@@ -46,11 +47,11 @@ def run_eval(args, save_dir):
     # params.horizon = 20
     # params.mppi_beta = 0.6
 
-    #overwrite config's value with the commandline arg value
+    # overwrite config's value with the commandline arg value
     params.use_ground_truth_dynamics = args.use_ground_truth_dynamics
 
-    #if run length wasn't specified in args, default to config file's value
-    if args.eval_run_length==-1:
+    # if run length wasn't specified in args, default to config file's value
+    if args.eval_run_length == -1:
         args.eval_run_length = params.rollout_length
 
     ##########################
@@ -61,21 +62,21 @@ def run_eval(args, save_dir):
     npr.seed(args.seed)
     tf.set_random_seed(args.seed)
 
-    #loader and data processor
+    # loader and data processor
     loader = Loader(save_dir)
 
-    #env, rand policy
+    # env, rand policy
     env, dt_from_xml = create_env(params.env_name)
     random_policy = Policy_Random(env.env)
 
-    #load data from the iteration (for plotting)
+    # load data from the iteration (for plotting)
     iter_data = loader.load_iter(args.iter_num)
     trainingLoss_perIter = iter_data.training_losses
     rew_perIter = iter_data.rollouts_rewardsPerIter
     scores_perIter = iter_data.rollouts_scoresPerIter
     trainingData_perIter = iter_data.training_numData
 
-    #mean/std info
+    # mean/std info
     normalization_data = iter_data.normalization_data
 
     ### data dims
@@ -97,21 +98,21 @@ def run_eval(args, save_dir):
             random_policy,
             execute_sideRollouts=args.execute_sideRollouts,
             plot_sideRollouts=True,
-            params=params)
+            params=params,
+        )
 
         ##############################################
         ### restore the saved dynamics model
         ##############################################
 
-        #restore model
+        # restore model
         sess.run(tf.global_variables_initializer())
-        restore_path = save_dir + '/models/model_aggIter' + str(
-            args.iter_num) + '.ckpt'
+        restore_path = save_dir + "/models/model_aggIter" + str(args.iter_num) + ".ckpt"
         saver = tf.train.Saver(max_to_keep=0)
         saver.restore(sess, restore_path)
         print("\n\nModel restored from ", restore_path, "\n\n")
 
-        #restore mean/std
+        # restore mean/std
         dyn_models.normalization_data = normalization_data
 
         ################################
@@ -136,20 +137,37 @@ def run_eval(args, save_dir):
                 starting_state,
                 starting_observation,
                 controller_type=params.controller_type,
-                take_exploratory_actions=False)
+                take_exploratory_actions=False,
+            )
 
-            #save info from MPC rollout
-            list_rewards.append(rollout_info['rollout_rewardTotal'])
-            list_scores.append(rollout_info['rollout_meanFinalScore'])
+            # save info from MPC rollout
+            list_rewards.append(rollout_info["rollout_rewardTotal"])
+            list_scores.append(rollout_info["rollout_meanFinalScore"])
             rollouts.append(rollout_info)
 
-        #save all eval rollouts
+        # save all eval rollouts
         pickle.dump(
             rollouts,
-            open(save_dir + '/saved_rollouts/rollouts_eval.pickle', 'wb'),
-            protocol=pickle.HIGHEST_PROTOCOL)
-        print("REWARDS: ", list_rewards, " .... mean: ", np.mean(list_rewards), " std: ", np.std(list_rewards))
-        print("SCORES: ", list_scores, " ... mean: ", np.mean(list_scores), " std: ", np.std(list_scores), "\n\n")
+            open(save_dir + "/saved_rollouts/rollouts_eval.pickle", "wb"),
+            protocol=pickle.HIGHEST_PROTOCOL,
+        )
+        print(
+            "REWARDS: ",
+            list_rewards,
+            " .... mean: ",
+            np.mean(list_rewards),
+            " std: ",
+            np.std(list_rewards),
+        )
+        print(
+            "SCORES: ",
+            list_scores,
+            " ... mean: ",
+            np.mean(list_scores),
+            " std: ",
+            np.std(list_scores),
+            "\n\n",
+        )
 
 
 def main():
@@ -160,19 +178,19 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--job_path', type=str,
-        default='../output/cheetah')  #address this WRT working directory
-    parser.add_argument('--iter_num', type=int, default=0)
-    parser.add_argument('--num_eval_rollouts', type=int, default=3)
-    parser.add_argument('--eval_run_length', type=int, default=-1)
-    parser.add_argument('--gpu_frac', type=float, default=0.9)
-    parser.add_argument('--use_ground_truth_dynamics', action="store_true")
-    parser.add_argument('--execute_sideRollouts', action="store_true")
-    parser.add_argument('--use_gpu', action="store_true")
-    parser.add_argument('--seed', type=int, default=0)
+        "--job_path", type=str, default="../output/cheetah"
+    )  # address this WRT working directory
+    parser.add_argument("--iter_num", type=int, default=0)
+    parser.add_argument("--num_eval_rollouts", type=int, default=3)
+    parser.add_argument("--eval_run_length", type=int, default=-1)
+    parser.add_argument("--gpu_frac", type=float, default=0.9)
+    parser.add_argument("--use_ground_truth_dynamics", action="store_true")
+    parser.add_argument("--execute_sideRollouts", action="store_true")
+    parser.add_argument("--use_gpu", action="store_true")
+    parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
 
-    #directory to load from
+    # directory to load from
     save_dir = os.path.abspath(args.job_path)
     assert os.path.isdir(save_dir)
 
@@ -183,12 +201,12 @@ def main():
     try:
         run_eval(args, save_dir)
     except (KeyboardInterrupt, SystemExit):
-        print('Terminating...')
+        print("Terminating...")
         sys.exit(0)
     except Exception as e:
-        print('ERROR: Exception occured while running a job....')
+        print("ERROR: Exception occured while running a job....")
         traceback.print_exc()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
